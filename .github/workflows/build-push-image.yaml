@@ -1,0 +1,160 @@
+name: Build and Scan Docker Image
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - '.github/workflows/build-push-image.yaml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - '.github/workflows/build-push-image.yaml'
+
+env:
+  IMAGE_NAME: 2048-game-app
+  # --- ECR Configuration (uncomment when ECR is set up) ---
+  # AWS_REGION: ${{ secrets.AWS_REGION }}
+  # ECR_REPOSITORY: 2048-game-app
+
+jobs:
+  build-and-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set short SHA
+        run: echo "SHORT_SHA=${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+
+      # --- AWS/ECR Authentication (uncomment when ECR is set up) ---
+      # - name: Configure AWS credentials
+      #   uses: aws-actions/configure-aws-credentials@v4
+      #   with:
+      #     role-to-assume: ${{ secrets.ROLE_ARN }}
+      #     aws-region: ${{ secrets.AWS_REGION }}
+
+      # - name: Login to Amazon ECR
+      #   id: login-ecr
+      #   uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build Docker image
+        working-directory: app
+        run: |
+          docker build -t ${{ env.IMAGE_NAME }}:${{ env.SHORT_SHA }} .
+          docker tag ${{ env.IMAGE_NAME }}:${{ env.SHORT_SHA }} ${{ env.IMAGE_NAME }}:latest
+
+      - name: Get image size
+        id: image-size
+        run: |
+          SIZE_BYTES=$(docker image inspect ${{ env.IMAGE_NAME }}:${{ env.SHORT_SHA }} --format='{{.Size}}')
+          SIZE_MB=$(echo "scale=2; $SIZE_BYTES / 1048576" | bc)
+          echo "size_mb=${SIZE_MB}" >> "$GITHUB_OUTPUT"
+          echo "size_bytes=${SIZE_BYTES}" >> "$GITHUB_OUTPUT"
+
+      # --- Trivy scans ---
+      - name: Trivy scan - Docker image vulnerabilities (report)
+        uses: aquasecurity/trivy-action@v0.35.0
+        with:
+          image-ref: ${{ env.IMAGE_NAME }}:${{ env.SHORT_SHA }}
+          format: 'table'
+          output: 'trivy-image-results.txt'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+          ignore-unfixed: true
+
+      - name: Trivy scan - Fail on CRITICAL vulnerabilities
+        id: trivy-critical
+        uses: aquasecurity/trivy-action@v0.35.0
+        with:
+          image-ref: ${{ env.IMAGE_NAME }}:${{ env.SHORT_SHA }}
+          format: 'table'
+          severity: 'CRITICAL'
+          exit-code: '1'
+          ignore-unfixed: true
+        continue-on-error: true
+
+      - name: Trivy scan - Dockerfile misconfiguration
+        uses: aquasecurity/trivy-action@v0.35.0
+        with:
+          scan-type: 'config'
+          scan-ref: 'app/Dockerfile'
+          format: 'table'
+          output: 'trivy-config-results.txt'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+
+      # --- Checkov scan ---
+      - name: Checkov - Dockerfile scan
+        id: checkov
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          file: app/Dockerfile
+          framework: dockerfile
+          output_format: cli
+          output_file_path: .
+          soft_fail: true
+
+      - name: Build and Scan Summary
+        if: always()
+        run: |
+          echo "## Docker Build & Scan Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          echo "### Image Details" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Property | Value |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|----------|-------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| **Image Name** | \`${{ env.IMAGE_NAME }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| **Image Tag** | \`${{ env.SHORT_SHA }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| **Full Reference** | \`${{ env.IMAGE_NAME }}:${{ env.SHORT_SHA }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| **Size** | ${{ steps.image-size.outputs.size_mb }} MB |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| **Commit** | \`${{ github.sha }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| **Branch** | \`${{ github.ref_name }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          echo "### Trivy Vulnerability Scan" >> "$GITHUB_STEP_SUMMARY"
+          echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f trivy-image-results.txt ]; then
+            cat trivy-image-results.txt >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Scan did not produce results" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          echo "### Trivy Dockerfile Scan" >> "$GITHUB_STEP_SUMMARY"
+          echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f trivy-config-results.txt ]; then
+            cat trivy-config-results.txt >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Scan did not produce results" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          echo "### Checkov Dockerfile Scan" >> "$GITHUB_STEP_SUMMARY"
+          echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f results_cli.txt ]; then
+            cat results_cli.txt >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Scan did not produce results" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fail if critical vulnerabilities found
+        if: steps.trivy-critical.outcome == 'failure'
+        run: |
+          echo "::error::Trivy found CRITICAL vulnerabilities in the image. Check the scan summary above."
+          exit 1
+
+      # --- Push to ECR (uncomment when ECR is set up) ---
+      # - name: Push image to ECR
+      #   run: |
+      #     ECR_URI=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}
+      #     docker tag ${{ env.IMAGE_NAME }}:${{ env.SHORT_SHA }} ${ECR_URI}:${{ env.SHORT_SHA }}
+      #     docker tag ${{ env.IMAGE_NAME }}:${{ env.SHORT_SHA }} ${ECR_URI}:latest
+      #     docker push ${ECR_URI}:${{ env.SHORT_SHA }}
+      #     docker push ${ECR_URI}:latest
