@@ -5,7 +5,7 @@ A containerized version of the [2048 puzzle game](https://en.wikipedia.org/wiki/
 ## Tech Stack
 
 - **Frontend**: Vanilla JavaScript (ES5), HTML, SCSS/CSS
-- **Server**: Custom Python HTTP server (`server.py`) for static file serving and log ingestion
+- **Server**: Custom threaded Python HTTP server (`server.py`) for static file serving, log ingestion, and health checks
 - **Container**: Docker (multi-stage build, non-root user)
 - **Deployment**: AWS EKS (Kubernetes)
 
@@ -97,7 +97,7 @@ env:
     value: "DEBUG"
 ```
 
-Default is `INFO`.
+Default is `INFO`. Invalid values are rejected with a warning and fall back to `INFO`. The value is validated against the allowlist (`DEBUG`, `INFO`, `WARN`, `ERROR`, `NONE`) in both `entrypoint.sh` and `server.py`.
 
 ### Example Container Output (INFO)
 
@@ -128,7 +128,26 @@ Logger.setLevel("NONE");    // silent
 - **Multi-stage build**: build stage copies source, runtime stage includes only required files
 - **Non-root user**: runs as `my_user` (UID 1000)
 - **Exposed port**: 3000
-- **Entrypoint**: `entrypoint.sh` generates `js/config.js` from environment variables, then starts `server.py`
+- **Entrypoint**: `entrypoint.sh` validates `LOG_LEVEL` against an allowlist, generates `js/config.js`, then starts `server.py`
+- **Healthcheck**: `GET /health` returns `200 ok` — checked every 30s with 3 retries
+- **Threading**: `server.py` uses `ThreadingHTTPServer` so log ingestion doesn't block static file serving
+
+## CI Pipeline
+
+A GitHub Actions workflow (`.github/workflows/build-push-image.yaml`) runs on pushes to `main` and pull requests targeting `main`, filtered to changes in `app/**` or the workflow file itself.
+
+### Pipeline Steps
+
+1. **Build** Docker image, tagged with short commit SHA (7 chars) and `latest`
+2. **Trivy image scan** - reports CRITICAL, HIGH, and MEDIUM vulnerabilities
+3. **Trivy critical gate** - fails the build if CRITICAL vulnerabilities are found (HIGH/MEDIUM are reported only)
+4. **Trivy Dockerfile scan** - checks for misconfigurations in the Dockerfile
+5. **Checkov Dockerfile scan** - static analysis for Dockerfile best practices
+6. **Summary** - all scan results and image details are written to the GitHub Actions job summary
+
+### ECR Push (Not Yet Active)
+
+ECR authentication and push steps are included but commented out. Uncomment when the ECR repository is set up.
 
 ## How to Play
 

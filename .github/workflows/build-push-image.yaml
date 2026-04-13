@@ -57,6 +57,7 @@ jobs:
           echo "size_mb=${SIZE_MB}" >> "$GITHUB_OUTPUT"
           echo "size_bytes=${SIZE_BYTES}" >> "$GITHUB_OUTPUT"
 
+      # --- Trivy scans ---
       - name: Trivy scan - Docker image vulnerabilities (report)
         uses: aquasecurity/trivy-action@v0.35.0
         with:
@@ -86,14 +87,16 @@ jobs:
           output: 'trivy-config-results.txt'
           severity: 'CRITICAL,HIGH,MEDIUM'
 
-      # --- Checkov scan (uncomment if checkov is required) ---
-      # - name: Checkov - Dockerfile scan
-      #   uses: bridgecrewio/checkov-action@v12
-      #   with:
-      #     file: app/Dockerfile
-      #     framework: dockerfile
-      #     output_format: cli
-      #     soft_fail: true
+      # --- Checkov scan ---
+      - name: Checkov - Dockerfile scan
+        id: checkov
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          file: app/Dockerfile
+          framework: dockerfile
+          output_format: cli
+          output_file_path: .
+          soft_fail: true
 
       - name: Build and Scan Summary
         if: always()
@@ -126,6 +129,16 @@ jobs:
           echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
           if [ -f trivy-config-results.txt ]; then
             cat trivy-config-results.txt >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Scan did not produce results" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          echo "### Checkov Dockerfile Scan" >> "$GITHUB_STEP_SUMMARY"
+          echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f results_cli.txt ]; then
+            cat results_cli.txt >> "$GITHUB_STEP_SUMMARY"
           else
             echo "Scan did not produce results" >> "$GITHUB_STEP_SUMMARY"
           fi

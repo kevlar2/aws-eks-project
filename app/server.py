@@ -9,7 +9,9 @@ Custom HTTP server for the 2048 game.
 import json
 import os
 import sys
-from http.server import HTTPServer, SimpleHTTPRequestHandler
+from http.server import SimpleHTTPRequestHandler
+from socketserver import ThreadingMixIn
+from http.server import HTTPServer
 
 LOG_LEVELS = {
     "DEBUG": 0,
@@ -19,10 +21,38 @@ LOG_LEVELS = {
     "NONE": 4,
 }
 
-SERVER_LOG_LEVEL = LOG_LEVELS.get(os.environ.get("LOG_LEVEL", "INFO"), 1)
+def _get_server_log_level():
+    raw_log_level = os.environ.get("LOG_LEVEL", "INFO")
+    normalized_log_level = raw_log_level.strip().upper()
+
+    if normalized_log_level in LOG_LEVELS:
+        return LOG_LEVELS[normalized_log_level]
+
+    print(
+        "[WARN] [Server] Unknown LOG_LEVEL '{}'; defaulting to INFO.".format(raw_log_level),
+        file=sys.stderr,
+        flush=True,
+    )
+    return LOG_LEVELS["INFO"]
+
+
+SERVER_LOG_LEVEL = _get_server_log_level()
+
+
+class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
+    daemon_threads = True
 
 
 class GameRequestHandler(SimpleHTTPRequestHandler):
+    def do_GET(self):
+        if self.path == "/health":
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain")
+            self.end_headers()
+            self.wfile.write(b"ok")
+            return
+        super().do_GET()
+
     def do_POST(self):
         if self.path == "/log":
             self._handle_log()
@@ -57,15 +87,17 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
             self.end_headers()
 
     def log_message(self, format, *args):
-        # Suppress default access logs for POST /log to avoid noise
-        if len(args) >= 1 and "POST /log" in str(args[0]):
-            return
+        # Suppress default access logs for healthcheck and POST /log to avoid noise
+        if len(args) >= 1:
+            request_line = str(args[0])
+            if "POST /log" in request_line or "GET /health" in request_line:
+                return
         super().log_message(format, *args)
 
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 3000))
-    server = HTTPServer(("0.0.0.0", port), GameRequestHandler)
+    server = ThreadingHTTPServer(("0.0.0.0", port), GameRequestHandler)
     print("Server running on port {}".format(port), flush=True)
     try:
         server.serve_forever()

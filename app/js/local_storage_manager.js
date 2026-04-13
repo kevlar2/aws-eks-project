@@ -59,7 +59,18 @@ LocalStorageManager.prototype.setBestScore = function (score) {
 LocalStorageManager.prototype.getGameState = function () {
   var stateJSON = this.storage.getItem(this.gameStateKey);
   Logger.debug("Storage", "Retrieved game state: " + (stateJSON ? "found" : "none"));
-  return stateJSON ? JSON.parse(stateJSON) : null;
+
+  if (!stateJSON) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(stateJSON);
+  } catch (error) {
+    Logger.error("Storage", "Failed to parse stored game state, clearing invalid data:", error);
+    this.clearGameState();
+    return null;
+  }
 };
 
 LocalStorageManager.prototype.setGameState = function (gameState) {

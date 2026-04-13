@@ -9,6 +9,8 @@ FROM python@sha256:0b23cfb7425d065008b778022a17b1551c82f8b4866ee5a7a200084b7e2ea
 
 WORKDIR /app 
 
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
 COPY --from=buildtime /app/index.html /app/index.html
 
 COPY --from=buildtime /app/js/ /app/js
@@ -29,6 +31,9 @@ USER my_user
 
 # Set LOG_LEVEL via environment variable: DEBUG, INFO, WARN, ERROR, NONE
 ENV LOG_LEVEL=INFO
+
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+  CMD ["curl", "-f", "http://localhost:3000/health"]
 
 EXPOSE 3000
 
