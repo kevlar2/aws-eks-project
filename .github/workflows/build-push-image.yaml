@@ -55,14 +55,22 @@ jobs:
           echo "size_mb=${SIZE_MB}" >> "$GITHUB_OUTPUT"
           echo "size_bytes=${SIZE_BYTES}" >> "$GITHUB_OUTPUT"
 
-      - name: Trivy scan - Docker image vulnerabilities
-        id: trivy-image
+      - name: Trivy scan - Docker image vulnerabilities (report)
         uses: aquasecurity/trivy-action@v0.35.0
         with:
           image-ref: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
           format: 'table'
           output: 'trivy-image-results.txt'
           severity: 'CRITICAL,HIGH,MEDIUM'
+          ignore-unfixed: true
+
+      - name: Trivy scan - Fail on CRITICAL vulnerabilities
+        id: trivy-critical
+        uses: aquasecurity/trivy-action@v0.35.0
+        with:
+          image-ref: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          format: 'table'
+          severity: 'CRITICAL'
           exit-code: '1'
           ignore-unfixed: true
         continue-on-error: true
@@ -122,7 +130,7 @@ jobs:
           echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Fail if critical vulnerabilities found
-        if: steps.trivy-image.outcome == 'failure'
+        if: steps.trivy-critical.outcome == 'failure'
         run: |
           echo "::error::Trivy found CRITICAL vulnerabilities in the image. Check the scan summary above."
           exit 1
