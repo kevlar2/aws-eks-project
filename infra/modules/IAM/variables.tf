@@ -1,16 +1,10 @@
-variable "vpc_cidr" {
-  type        = string
-  description = "IP range for my vpc"
+variable "eks-cluster-name" {
+  type = string
 }
 
 variable "project_name" {
   type        = string
   description = "name of my project"
-}
-
-variable "az_count" {
-  type        = number
-  description = "number of availability zones"
 }
 
 variable "environment" {
@@ -48,5 +42,5 @@ variable "application_name" {
 variable "service_name" {
   type        = string
   description = "name of the service"
-  default     = "vpc"
+  default     = "iam"
 }
