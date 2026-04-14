@@ -135,6 +135,28 @@ resource "aws_iam_role_policy_attachment" "ebs-csi-policy" {
 }
 
 
+resource "aws_launch_template" "eks_worker_nodes" {
+  name_prefix   = "${var.project_name}-${var.environment}-eks-workers-"
+  instance_type = var.instance_type
+
+  tag_specifications {
+    resource_type = "instance"
+
+    tags = merge(local.common_tags, {
+      Name = "${var.project_name}-${var.environment}-eks-worker-node"
+    })
+  }
+
+  tag_specifications {
+    resource_type = "volume"
+
+    tags = merge(local.common_tags, {
+      Name = "${var.project_name}-${var.environment}-eks-worker-volume"
+    })
+  }
+}
+
+
 
 resource "aws_eks_node_group" "eks_worker_node" {
   cluster_name    = aws_eks_cluster.eks_cluster.name
@@ -149,8 +171,12 @@ resource "aws_eks_node_group" "eks_worker_node" {
     desired_size = 3
   }
 
-  ami_type       = "AL2023_x86_64_STANDARD"
-  instance_types = ["${var.instance_type}"]
+  ami_type = "AL2023_x86_64_STANDARD"
+
+  launch_template {
+    id      = aws_launch_template.eks_worker_nodes.id
+    version = "$Latest"
+  }
 
   depends_on = [var.eks-node-policy]
 
@@ -197,6 +223,27 @@ data "aws_eks_addon_version" "pod-identity-agent" {
   most_recent        = true
 
 }
+
+data "aws_eks_addon_version" "metrics-server" {
+  addon_name         = "metrics-server"
+  kubernetes_version = aws_eks_cluster.eks_cluster.version
+  most_recent        = true
+  
+}
+
+resource "aws_eks_addon" "metrics-server" {
+  cluster_name  = aws_eks_cluster.eks_cluster.name
+  addon_name    = "metrics-server"
+  addon_version = data.aws_eks_addon_version.metrics-server.version
+
+  resolve_conflicts_on_create = "OVERWRITE"
+  resolve_conflicts_on_update = "PRESERVE"
+
+  tags = merge(local.common_tags, {
+    Name = "${var.project_name}-${var.environment}-metrics-server-addon"
+  })
+}
+
 
 resource "aws_eks_addon" "vpc-cni" {
   cluster_name  = aws_eks_cluster.eks_cluster.name

@@ -1,3 +1,5 @@
+data "aws_region" "current" {}
+
 output "eks-cluster-name" {
   description = "name of eks cluster"
   value       = aws_eks_cluster.eks_cluster.name
@@ -26,4 +28,9 @@ output "ebs-csi-version" {
 output "pod-identity-agent-version" {
   description = "version of addon for pod identity agent"
   value       = data.aws_eks_addon_version.pod-identity-agent.version
+}
+
+output "kubeconfig_update_command" {
+  description = "Convenience command to update local kubeconfig using awscli"
+  value       = "aws eks update-kubeconfig --name ${aws_eks_cluster.eks_cluster.name} --region ${data.aws_region.current.region}"
 }
