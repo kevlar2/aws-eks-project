@@ -103,7 +103,7 @@ resource "aws_iam_policy" "cert-manager-iam-policy" {
           "route53:ChangeResourceRecordSets",
           "route53:ListResourceRecordSets"
         ],
-        "Resource" : "arn:aws:route53:::hostedzone/Z0075379YVJ2NJZFXYU",
+        "Resource" : "arn:aws:route53:::hostedzone/${var.route53_zone_id}",
         "Condition" : {
           "ForAllValues:StringEquals" : {
             "route53:ChangeResourceRecordSetsRecordTypes" : ["TXT"]
@@ -225,10 +225,6 @@ resource "aws_eks_pod_identity_association" "external-dns" {
     Name = "${var.project_name}-${var.environment}-external-dns-pod-identity-association"
   })
 }
-
-
-
-
 
 
 

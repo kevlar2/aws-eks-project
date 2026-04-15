@@ -103,13 +103,13 @@ jobs:
         working-directory: infra
 
       - name: Terraform Plan
-        run: terraform plan -input=false -lock=false
+        run: terraform plan -input=false -lock-timeout=300s
         working-directory: infra
 
       # --- Security Scanning ---
       # Trivy replaces tfsec (which is deprecated and merged into Trivy)
       - name: Trivy Terraform Security Scan (report)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.28.0
         with:
           scan-type: 'config'
           scan-ref: 'infra'
@@ -118,7 +118,7 @@ jobs:
           format: 'table'
 
       - name: Trivy Terraform Security Scan (gate on CRITICAL)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.28.0
         with:
           scan-type: 'config'
           scan-ref: 'infra'
@@ -150,23 +150,34 @@ jobs:
         with:
           api-key: ${{ secrets.INFRACOST_API_KEY }}
 
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
       - name: AWS OIDC Login
         uses: ./.github/actions/aws-oidc-login
         with:
           role-to-assume: ${{ env.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Terraform Init
+        run: terraform init -reconfigure
+        working-directory: infra
+
       - name: Generate Infracost baseline from main
         id: baseline
         continue-on-error: true
         run: |
+          git stash -- infra/
           git fetch origin main --depth=1
           git checkout origin/main -- infra/
+          terraform -chdir=infra init -reconfigure
           infracost breakdown \
             --path=infra \
             --format=json \
             --out-file=/tmp/infracost-base.json
-          git checkout HEAD -- infra/
+          git checkout HEAD -- infra/ || git stash pop
 
       - name: Generate Infracost diff from PR
         if: steps.baseline.outcome == 'success'
@@ -221,9 +232,12 @@ jobs:
 
       - name: Setup Conftest
         run: |
-          LATEST=$(curl -s https://api.github.com/repos/open-policy-agent/conftest/releases/latest | grep tag_name | cut -d '"' -f 4 | sed 's/v//')
-          curl -LO "https://github.com/open-policy-agent/conftest/releases/download/v${LATEST}/conftest_${LATEST}_Linux_x86_64.tar.gz"
-          tar xzf "conftest_${LATEST}_Linux_x86_64.tar.gz"
+          CONFTEST_VERSION="0.68.2"
+          CONFTEST_SHA256="e8144c6d6d2ae0260b869caa60c7c262a1f95ac63ec1e5d2fb19be452d606347"
+          CONFTEST_TARBALL="conftest_${CONFTEST_VERSION}_Linux_x86_64.tar.gz"
+          curl -fsSLO "https://github.com/open-policy-agent/conftest/releases/download/v${CONFTEST_VERSION}/${CONFTEST_TARBALL}"
+          echo "${CONFTEST_SHA256}  ${CONFTEST_TARBALL}" | sha256sum -c -
+          tar xzf "${CONFTEST_TARBALL}"
           sudo mv conftest /usr/local/bin/
 
       - name: AWS OIDC Login
@@ -237,6 +251,6 @@ jobs:
         working-directory: infra
         run: |
           terraform init -reconfigure
-          terraform plan -out=tfplan.binary -input=false -lock=false
+          terraform plan -out=tfplan.binary -input=false -lock-timeout=300s
           terraform show -json tfplan.binary > tfplan.json
           conftest test tfplan.json --policy ../policies/opa/terraform.rego

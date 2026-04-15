@@ -1,6 +1,5 @@
 locals {
   eks_ebs_csi_driver_role_name = "${var.project_name}-${var.environment}-eks-ebs-csi-driver-role"
-  ebs_csi_role_name            = "${var.project_name}-${var.environment}-ebs-csi-role"
 
   # Common tags applied to all resources
   common_tags = {

@@ -23,31 +23,24 @@ resources_by_type(t) := {rc |
 }
 
 # ---------------------------------------------------------------
-# Tagging: every resource must have required tags
+# Tagging: every taggable resource must have required tags
 # ---------------------------------------------------------------
-required_tags := {"environment", "project", "cost_center"}
+# Use the exact tag keys produced by our Terraform modules
+required_tags := {"Environment", "Project", "CostCenter"}
 
 deny contains msg if {
 	some rc in resources
-	tags := object.get(rc.change.after, "tags", {})
+	tags := object.get(rc.change.after, "tags", null)
 	tags != null
+	count(tags) > 0
 	some tag in required_tags
 	not tag_present(tags, tag)
 	msg := sprintf("Resource %s (%s) is missing required tag '%s'", [rc.address, rc.type, tag])
 }
 
-# Case-insensitive tag check (tags may use Title Case via locals)
+# Exact match on tag key
 tag_present(tags, key) if {
 	_ = tags[key]
-}
-
-tag_present(tags, key) if {
-	capitalised := concat("", [upper(substring(key, 0, 1)), substring(key, 1, -1)])
-	_ = tags[capitalised]
-}
-
-tag_present(tags, key) if {
-	_ = tags[upper(key)]
 }
 
 # ---------------------------------------------------------------

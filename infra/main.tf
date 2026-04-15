@@ -12,7 +12,8 @@ module "vpc" {
 
 module "IAM" {
   source           = "./modules/IAM"
-  eks-cluster-name = module.eks.eks-cluster-name
+  eks-cluster-name = var.cluster_name
+  route53_zone_id  = var.route53_zone_id
   project_name     = var.project_name
   environment      = var.environment
   component        = var.component

@@ -11,7 +11,7 @@ resource "aws_eks_cluster" "eks_cluster" {
   vpc_config {
     subnet_ids              = flatten([var.public_subnet_id, var.private_subnet_id]) #worker nodes in private, control plane in public
     endpoint_public_access  = true                                                   #enables access of kube API server by the internet
-    endpoint_private_access = false                                                  #ensures traffic between control plane and worker nodes stays within aws network, very secure
+    endpoint_private_access = false                                                  #private endpoint disabled; cluster API is accessed via the public endpoint only
 
   }
 
@@ -78,63 +78,6 @@ resource "aws_iam_role_policy_attachment" "amazon_ebs_csi_driver" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
 }
 
-
-resource "aws_iam_role" "ebs-csi-role" {
-  name = local.ebs_csi_role_name
-  assume_role_policy = jsonencode({
-    "Version" : "2012-10-17",
-    "Statement" : [
-      {
-        "Effect" : "Allow",
-        "Action" : [
-          "ec2:CreateVolume",
-          "ec2:AttachVolume",
-          "ec2:DetachVolume",
-          "ec2:DeleteVolume",
-          "ec2:CreateSnapshot",
-          "ec2:DeleteSnapshot",
-          "ec2:DescribeVolumes",
-          "ec2:DescribeSnapshots",
-          "ec2:DescribeInstances",
-          "ec2:DescribeAvailabilityZones",
-          "ec2:DescribeVolumeStatus",
-          "ec2:DescribeVolumeAttribute",
-          "ec2:DescribeSnapshotAttribute",
-          "ec2:DescribeInstanceAttribute",
-          "ec2:DescribeInstanceCreditSpecifications",
-          "ec2:DescribeVolumeTypes",
-          "ec2:DescribeVpcAttribute",
-          "ec2:DescribeVpcEndpoints",
-          "ec2:DescribeVpcs",
-          "ec2:ModifyVolume",
-          "ec2:ModifyVolumeAttribute",
-          "ec2:ModifyInstanceAttribute"
-        ],
-        "Principal" = {
-          Service = "ec2.amazonaws.com"
-        }
-        Action = "sts:AssumeRole"
-      }
-
-
-
-    ]
-  })
-
-  tags = merge(local.common_tags, {
-    Name = local.ebs_csi_role_name
-  })
-
-}
-
-
-
-resource "aws_iam_role_policy_attachment" "ebs-csi-policy" {
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
-  role       = aws_iam_role.ebs-csi-role.name
-}
-
-
 resource "aws_launch_template" "eks_worker_nodes" {
   name_prefix   = "${var.project_name}-${var.environment}-eks-workers-"
   instance_type = var.instance_type
@@ -155,8 +98,6 @@ resource "aws_launch_template" "eks_worker_nodes" {
     })
   }
 }
-
-
 
 resource "aws_eks_node_group" "eks_worker_node" {
   cluster_name    = aws_eks_cluster.eks_cluster.name
@@ -203,7 +144,6 @@ data "aws_eks_addon_version" "core-dns" {
   most_recent        = true
 }
 
-
 data "aws_eks_addon_version" "kube-proxy" {
   addon_name         = "kube-proxy"
   kubernetes_version = aws_eks_cluster.eks_cluster.version
@@ -214,14 +154,12 @@ data "aws_eks_addon_version" "ebs-csi-driver" {
   addon_name         = "aws-ebs-csi-driver"
   kubernetes_version = aws_eks_cluster.eks_cluster.version
   most_recent        = true
-
 }
 
 data "aws_eks_addon_version" "pod-identity-agent" {
   addon_name         = "eks-pod-identity-agent"
   kubernetes_version = aws_eks_cluster.eks_cluster.version
   most_recent        = true
-
 }
 
 data "aws_eks_addon_version" "metrics-server" {
@@ -243,7 +181,6 @@ resource "aws_eks_addon" "metrics-server" {
     Name = "${var.project_name}-${var.environment}-metrics-server-addon"
   })
 }
-
 
 resource "aws_eks_addon" "vpc-cni" {
   cluster_name  = aws_eks_cluster.eks_cluster.name
@@ -271,8 +208,6 @@ resource "aws_eks_addon" "core-dns" {
   })
 
   depends_on = [aws_eks_node_group.eks_worker_node]
-
-
 }
 
 resource "aws_eks_addon" "kube-proxy" {
@@ -286,7 +221,6 @@ resource "aws_eks_addon" "kube-proxy" {
   tags = merge(local.common_tags, {
     Name = "${var.project_name}-${var.environment}-kube-proxy-addon"
   })
-
 }
 
 resource "aws_eks_addon" "ebs-csi-driver" {
@@ -302,8 +236,7 @@ resource "aws_eks_addon" "ebs-csi-driver" {
     Name = "${var.project_name}-${var.environment}-ebs-csi-addon"
   })
 
-  depends_on = [aws_iam_role_policy_attachment.ebs-csi-policy, aws_eks_node_group.eks_worker_node]
-
+  depends_on = [aws_iam_role_policy_attachment.amazon_ebs_csi_driver, aws_eks_node_group.eks_worker_node]
 }
 
 resource "aws_eks_addon" "pod-identity-agent" {
@@ -317,7 +250,6 @@ resource "aws_eks_addon" "pod-identity-agent" {
   tags = merge(local.common_tags, {
     Name = "${var.project_name}-${var.environment}-pod-identity-addon"
   })
-
 
 }
 

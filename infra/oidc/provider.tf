@@ -6,6 +6,10 @@ terraform {
       source  = "hashicorp/aws"
       version = "6.26.0"
     }
+    tls = {
+      source  = "hashicorp/tls"
+      version = "~> 4.0"
+    }
   }
 
   # S3 backend for state storage and for state locking.

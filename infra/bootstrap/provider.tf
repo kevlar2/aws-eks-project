@@ -9,8 +9,9 @@ terraform {
   }
 
   # Local backend — bootstrap must run before the S3 bucket exists.
-  # State for this root is stored locally and should be committed or
-  # kept safe. Do NOT switch to S3 backend here.
+  # State for this root is stored locally and should be kept safe;
+  # it is NOT committed to git (.gitignore excludes *.tfstate*).
+  # Do NOT switch to S3 backend here.
   backend "local" {}
 }
 

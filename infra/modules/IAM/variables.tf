@@ -1,5 +1,11 @@
 variable "eks-cluster-name" {
-  type = string
+  type        = string
+  description = "Name of the EKS cluster for pod identity associations"
+}
+
+variable "route53_zone_id" {
+  type        = string
+  description = "Route53 hosted zone ID for cert-manager DNS validation"
 }
 
 variable "project_name" {

@@ -40,6 +40,12 @@ variable "instance_type" {
   default     = "t3.medium"
 }
 
+variable "route53_zone_id" {
+  type        = string
+  description = "Route53 hosted zone ID for cert-manager DNS validation"
+  default     = "Z008157839VKLC5BD1MTT"
+}
+
 variable "environment" {
   type        = string
   description = "Deployment environment"
