@@ -116,6 +116,7 @@ jobs:
           severity: 'CRITICAL,HIGH,MEDIUM'
           exit-code: '0'
           format: 'table'
+          trivyignores: .trivyignore
 
       - name: Trivy Terraform Security Scan (gate on CRITICAL)
         uses: aquasecurity/trivy-action@v0.35.0
@@ -125,6 +126,7 @@ jobs:
           severity: 'CRITICAL'
           exit-code: '1'
           format: 'table'
+          trivyignores: .trivyignore
 
       - name: Checkov Security Scan
         uses: bridgecrewio/checkov-action@v12
@@ -187,10 +189,6 @@ jobs:
             --compare-to=/tmp/infracost-base.json \
             --format=json \
             --out-file=/tmp/infracost.json
-          echo "Cost Estimate Summary:"
-          infracost output \
-            --path="/tmp/infracost.json" \
-            --format=table
 
       - name: Fallback Infracost breakdown (no baseline available)
         if: steps.baseline.outcome != 'success'
@@ -199,18 +197,24 @@ jobs:
             --path=infra \
             --format=json \
             --out-file=/tmp/infracost.json
-          echo "Cost Estimate Summary:"
-          infracost output \
-            --path="/tmp/infracost.json" \
-            --format=table
+
+      - name: Infracost Cost Estimate Summary
+        run: |
+          echo "## Infracost Cost Estimate" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          infracost output --path="/tmp/infracost.json" --format=table >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
 
       - name: Post Infracost Comment
         if: github.event_name == 'pull_request'
-        uses: infracost/actions/comment@v1
-        with:
-          path: /tmp/infracost.json
-          behavior: update
-          github-token: ${{ github.token }}
+        run: |
+          infracost comment github \
+            --path=/tmp/infracost.json \
+            --repo="$GITHUB_REPOSITORY" \
+            --pull-request="${{ github.event.pull_request.number }}" \
+            --github-token="${{ github.token }}" \
+            --behavior=update
 
   # ---------------------------------------------------------------
   # Step 5: OPA policy check

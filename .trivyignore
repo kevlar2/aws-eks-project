@@ -1,0 +1,15 @@
+# Trivy ignore file — intentional dev-environment design decisions
+# These findings are acknowledged and accepted for a non-production EKS cluster.
+# Equivalent Checkov skips are in .checkov.yml (CKV_AWS_39, CKV_AWS_260).
+
+# EKS public API endpoint is enabled for developer access without VPN.
+# Will be restricted to private-only + VPN when promoting to production.
+AVD-AWS-0040
+
+# EKS public access CIDR defaults to 0.0.0.0/0.
+# Will be scoped to corporate CIDRs in production.
+AVD-AWS-0041
+
+# Security group egress allows all outbound traffic to 0.0.0.0/0.
+# Standard pattern for EKS worker nodes that need to pull images, reach AWS APIs, etc.
+AVD-AWS-0104
