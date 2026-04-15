@@ -1,4 +1,7 @@
 .sass-cache/
 .terraform
 .terraform.lock.hcl
+*tfstate
+*.tfstate.backup
+terraform.tfstate.backup
 __pycache__/

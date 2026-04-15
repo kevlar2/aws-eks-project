@@ -1,0 +1,45 @@
+# Checkov configuration for 2048 EKS project
+# https://www.checkov.io/2.Basics/CLI%20Command%20Reference.html
+
+framework:
+  - terraform
+
+# Suppress checks that are intentional design decisions
+skip-check:
+  # EKS cluster has public endpoint enabled by design (dev environment)
+  - CKV_AWS_39   # EKS cluster endpoint public access
+  # Security group ingress from 0.0.0.0/0 on port 80/443 is intentional for ALB
+  - CKV_AWS_260  # Security group allows ingress from 0.0.0.0/0
+  # S3 state bucket uses AES256 (SSE-S3) which is sufficient; KMS not required
+  - CKV_AWS_145  # S3 bucket encrypted with KMS
+  # EKS control plane logging is not yet configured (future improvement)
+  - CKV_AWS_58   # EKS cluster control plane logging
+  # EKS control plane logging not fully enabled (dev environment)
+  - CKV_AWS_37   # EKS control plane logging enabled
+  # EKS public endpoint accessible to 0.0.0.0/0 (dev environment, restricted later)
+  - CKV_AWS_38   # EKS public endpoint restricted to specific CIDRs
+  # Public subnets auto-assign public IPs by design (required for ALB/NAT)
+  - CKV_AWS_130  # Subnet auto-assign public IP
+  # External DNS IAM policy uses wildcard resource (Route53 requires this)
+  - CKV_AWS_355  # IAM policy document allows wildcard resource
+  # OIDC IAM policy uses wildcard resource (read-only, intentional for CI)
+  - CKV_AWS_356  # IAM policy document allows wildcard action
+  # OIDC policy s3:GetObject for state bucket access (legitimate CI use)
+  - CKV_AWS_108  # IAM policy allows data exfiltration
+  # S3 cross-region replication not needed for dev state bucket
+  - CKV_AWS_144  # S3 bucket cross-region replication
+  # S3 access logging not needed for dev state bucket
+  - CKV_AWS_18   # S3 bucket access logging
+  # SG will be attached to ALB when app is deployed; pre-provisioned for now
+  - CKV2_AWS_5   # Security group not attached to resource
+  # S3 state bucket event notifications not needed for dev
+  - CKV2_AWS_62  # S3 bucket event notifications
+  # S3 state bucket lifecycle policy not needed for dev
+  - CKV2_AWS_61  # S3 bucket lifecycle configuration
+  # VPC flow logging is a future improvement (adds cost in dev)
+  - CKV2_AWS_11  # VPC flow logging enabled
+  # Default VPC SG hardening deferred (EKS manages its own SGs)
+  - CKV2_AWS_12  # Default SG restricts all traffic
+
+quiet: true
+compact: true

@@ -1,0 +1,260 @@
+name: Terraform Quality Gate
+
+on:
+  pull_request:
+    paths:
+      - 'infra/**'
+      - '.github/workflows/terraform-tests.yaml'
+  push:
+    branches: [main]
+    paths:
+      - 'infra/**'
+      - '.github/workflows/terraform-tests.yaml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# OIDC: required for aws-actions/configure-aws-credentials with role-to-assume
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
+env:
+  AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+  AWS_REGION: eu-west-2
+  TF_ROOT: infra
+
+jobs:
+  # ---------------------------------------------------------------
+  # Step 1: Detect which parts of infra actually changed
+  # ---------------------------------------------------------------
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      infra: ${{ steps.changes.outputs.infra }}
+      modules: ${{ steps.changes.outputs.modules }}
+      bootstrap: ${{ steps.changes.outputs.bootstrap }}
+      any_changed: ${{ steps.changes.outputs.any_changed }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Detect changed paths
+        id: changes
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            infra:
+              - 'infra/*.tf'
+              - 'infra/modules/**'
+            modules:
+              - 'infra/modules/**'
+            bootstrap:
+              - 'infra/bootstrap/**'
+            any_changed:
+              - 'infra/**'
+
+  # ---------------------------------------------------------------
+  # Step 2: Format check — runs if ANY terraform file changed
+  # ---------------------------------------------------------------
+  format-check:
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.any_changed == 'true'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive infra/
+
+  # ---------------------------------------------------------------
+  # Step 3: Lint, validate, plan, and security scan
+  # ---------------------------------------------------------------
+  quality-checks:
+    runs-on: ubuntu-latest
+    needs: [detect-changes, format-check]
+    if: needs.detect-changes.outputs.infra == 'true'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v4
+
+      - name: AWS OIDC Login
+        uses: ./.github/actions/aws-oidc-login
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: TFLint Init & Lint
+        run: tflint --init && tflint
+        working-directory: infra
+
+      - name: Terraform Init & Validate
+        run: |
+          terraform init -reconfigure
+          terraform validate
+        working-directory: infra
+
+      - name: Terraform Plan
+        run: terraform plan -input=false -lock-timeout=300s
+        working-directory: infra
+
+      # --- Security Scanning ---
+      # Trivy replaces tfsec (which is deprecated and merged into Trivy)
+      - name: Trivy Terraform Security Scan (report)
+        uses: aquasecurity/trivy-action@v0.35.0
+        with:
+          scan-type: 'config'
+          scan-ref: 'infra'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+          exit-code: '0'
+          format: 'table'
+          trivyignores: .trivyignore
+
+      - name: Trivy Terraform Security Scan (gate on CRITICAL)
+        uses: aquasecurity/trivy-action@v0.35.0
+        with:
+          scan-type: 'config'
+          scan-ref: 'infra'
+          severity: 'CRITICAL'
+          exit-code: '1'
+          format: 'table'
+          trivyignores: .trivyignore
+
+      - name: Checkov Security Scan
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: infra
+          framework: terraform
+          quiet: true
+          soft_fail: false
+          config_file: .checkov.yml
+
+  # ---------------------------------------------------------------
+  # Step 4: Cost estimation
+  # ---------------------------------------------------------------
+  infracost:
+    runs-on: ubuntu-latest
+    needs: [detect-changes, format-check]
+    if: needs.detect-changes.outputs.infra == 'true'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Infracost
+        uses: infracost/actions/setup@v3
+        with:
+          api-key: ${{ secrets.INFRACOST_API_KEY }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: AWS OIDC Login
+        uses: ./.github/actions/aws-oidc-login
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Terraform Init
+        run: terraform init -reconfigure
+        working-directory: infra
+
+      - name: Generate Infracost baseline from main
+        id: baseline
+        continue-on-error: true
+        run: |
+          git stash -- infra/
+          git fetch origin main --depth=1
+          git checkout origin/main -- infra/
+          terraform -chdir=infra init -reconfigure
+          infracost breakdown \
+            --path=infra \
+            --format=json \
+            --out-file=/tmp/infracost-base.json
+          git checkout HEAD -- infra/ || git stash pop
+
+      - name: Generate Infracost diff from PR
+        if: steps.baseline.outcome == 'success'
+        run: |
+          infracost diff \
+            --path=infra \
+            --compare-to=/tmp/infracost-base.json \
+            --format=json \
+            --out-file=/tmp/infracost.json
+
+      - name: Fallback Infracost breakdown (no baseline available)
+        if: steps.baseline.outcome != 'success'
+        run: |
+          infracost breakdown \
+            --path=infra \
+            --format=json \
+            --out-file=/tmp/infracost.json
+
+      - name: Infracost Cost Estimate Summary
+        run: |
+          echo "## Infracost Cost Estimate" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          infracost output --path="/tmp/infracost.json" --format=table >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Post Infracost Comment
+        if: github.event_name == 'pull_request'
+        run: |
+          infracost comment github \
+            --path=/tmp/infracost.json \
+            --repo="$GITHUB_REPOSITORY" \
+            --pull-request="${{ github.event.pull_request.number }}" \
+            --github-token="${{ github.token }}" \
+            --behavior=update
+
+  # ---------------------------------------------------------------
+  # Step 5: OPA policy check
+  # ---------------------------------------------------------------
+  policy-check:
+    runs-on: ubuntu-latest
+    needs:
+      - detect-changes
+      - quality-checks
+    if: |
+      always() &&
+      needs.detect-changes.outputs.infra == 'true' &&
+      needs.quality-checks.result == 'success'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Setup Conftest
+        run: |
+          CONFTEST_VERSION="0.68.2"
+          CONFTEST_SHA256="e8144c6d6d2ae0260b869caa60c7c262a1f95ac63ec1e5d2fb19be452d606347"
+          CONFTEST_TARBALL="conftest_${CONFTEST_VERSION}_Linux_x86_64.tar.gz"
+          curl -fsSLO "https://github.com/open-policy-agent/conftest/releases/download/v${CONFTEST_VERSION}/${CONFTEST_TARBALL}"
+          echo "${CONFTEST_SHA256}  ${CONFTEST_TARBALL}" | sha256sum -c -
+          tar xzf "${CONFTEST_TARBALL}"
+          sudo mv conftest /usr/local/bin/
+
+      - name: AWS OIDC Login
+        uses: ./.github/actions/aws-oidc-login
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: OPA Policy Check
+        timeout-minutes: 10
+        working-directory: infra
+        run: |
+          terraform init -reconfigure
+          terraform plan -out=tfplan.binary -input=false -lock-timeout=300s
+          terraform show -json tfplan.binary > tfplan.json
+          conftest test tfplan.json --policy ../policies/opa/terraform.rego
