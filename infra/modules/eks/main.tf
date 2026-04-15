@@ -228,7 +228,7 @@ data "aws_eks_addon_version" "metrics-server" {
   addon_name         = "metrics-server"
   kubernetes_version = aws_eks_cluster.eks_cluster.version
   most_recent        = true
-  
+
 }
 
 resource "aws_eks_addon" "metrics-server" {
