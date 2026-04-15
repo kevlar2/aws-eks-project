@@ -1,0 +1,19 @@
+# Checkov configuration for 2048 EKS project
+# https://www.checkov.io/2.Basics/CLI%20Command%20Reference.html
+
+framework:
+  - terraform
+
+# Suppress checks that are intentional design decisions
+skip-check:
+  # EKS cluster has public endpoint enabled by design (dev environment)
+  - CKV_AWS_39   # EKS cluster endpoint public access
+  # Security group ingress from 0.0.0.0/0 on port 80/443 is intentional for ALB
+  - CKV_AWS_260  # Security group allows ingress from 0.0.0.0/0
+  # S3 state bucket uses AES256 (SSE-S3) which is sufficient; KMS not required
+  - CKV_AWS_145  # S3 bucket encrypted with KMS
+  # EKS control plane logging is not yet configured (future improvement)
+  - CKV_AWS_58   # EKS cluster control plane logging
+
+quiet: true
+compact: true
