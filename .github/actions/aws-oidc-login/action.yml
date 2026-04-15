@@ -1,0 +1,20 @@
+name: 'AWS OIDC Login'
+description: 'Authenticate to AWS using GitHub OIDC provider (no long-lived secrets)'
+
+inputs:
+  role-to-assume:
+    description: 'The ARN of the IAM role to assume via OIDC'
+    required: true
+  aws-region:
+    description: 'AWS region to configure'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Configure AWS Credentials via OIDC
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ inputs.role-to-assume }}
+        aws-region: ${{ inputs.aws-region }}
+        role-session-name: github-actions-${{ github.run_id }}
