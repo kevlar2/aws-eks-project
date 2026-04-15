@@ -82,6 +82,11 @@ resource "aws_launch_template" "eks_worker_nodes" {
   name_prefix   = "${var.project_name}-${var.environment}-eks-workers-"
   instance_type = var.instance_type
 
+  metadata_options {
+    http_endpoint = "enabled"
+    http_tokens   = "required"
+  }
+
   tag_specifications {
     resource_type = "instance"
 

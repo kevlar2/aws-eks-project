@@ -128,8 +128,9 @@ resource "aws_route_table_association" "private_rta" {
 }
 
 resource "aws_security_group" "security-group" {
-  name   = local.security_group_name
-  vpc_id = aws_vpc.my_vpc.id
+  name        = local.security_group_name
+  description = "Security group for EKS ALB ingress and egress traffic"
+  vpc_id      = aws_vpc.my_vpc.id
 
   tags = merge(local.common_tags, {
     Name = local.security_group_name
@@ -138,6 +139,7 @@ resource "aws_security_group" "security-group" {
 
 resource "aws_vpc_security_group_ingress_rule" "http_traffic" {
   security_group_id = aws_security_group.security-group.id
+  description       = "Allow inbound HTTP traffic from the internet"
   cidr_ipv4         = "0.0.0.0/0"
   from_port         = 80
   ip_protocol       = "tcp"
@@ -151,6 +153,7 @@ resource "aws_vpc_security_group_ingress_rule" "http_traffic" {
 
 resource "aws_vpc_security_group_ingress_rule" "https_traffic" {
   security_group_id = aws_security_group.security-group.id
+  description       = "Allow inbound HTTPS traffic from the internet"
   cidr_ipv4         = "0.0.0.0/0"
   from_port         = 443
   ip_protocol       = "tcp"
@@ -164,6 +167,7 @@ resource "aws_vpc_security_group_ingress_rule" "https_traffic" {
 
 resource "aws_vpc_security_group_egress_rule" "outbound_traffic" {
   security_group_id = aws_security_group.security-group.id
+  description       = "Allow all outbound traffic"
   cidr_ipv4         = "0.0.0.0/0"
   ip_protocol       = "-1"
 
