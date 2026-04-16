@@ -39,10 +39,15 @@ output "kubeconfig_update_command" {
   value       = module.eks.kubeconfig_update_command
 }
 
+output "ecr_repository_url" {
+  description = "Full URL of the ECR repository for docker push/pull"
+  value       = module.ecr.repository_url
+}
 
-
-
-
+output "ecr_repository_arn" {
+  description = "ARN of the ECR repository"
+  value       = module.ecr.repository_arn
+}
 
 
 

@@ -14,9 +14,8 @@ on:
 
 env:
   IMAGE_NAME: 2048-game-app
-  # --- ECR Configuration (uncomment when ECR is set up) ---
-  # AWS_REGION: ${{ secrets.AWS_REGION }}
-  # ECR_REPOSITORY: 2048-game-app
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  ECR_REPOSITORY: 2048-eks-project-Dev-2048-game-app
 
 jobs:
   build-and-scan:
@@ -32,16 +31,17 @@ jobs:
       - name: Set short SHA
         run: echo "SHORT_SHA=${GITHUB_SHA::7}" >> "$GITHUB_ENV"
 
-      # --- AWS/ECR Authentication (uncomment when ECR is set up) ---
-      # - name: Configure AWS credentials
-      #   uses: aws-actions/configure-aws-credentials@v4
-      #   with:
-      #     role-to-assume: ${{ secrets.ROLE_ARN }}
-      #     aws-region: ${{ secrets.AWS_REGION }}
+      - name: Configure AWS credentials
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
 
-      # - name: Login to Amazon ECR
-      #   id: login-ecr
-      #   uses: aws-actions/amazon-ecr-login@v2
+      - name: Login to Amazon ECR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build Docker image
         working-directory: app
@@ -150,11 +150,11 @@ jobs:
           echo "::error::Trivy found CRITICAL vulnerabilities in the image. Check the scan summary above."
           exit 1
 
-      # --- Push to ECR (uncomment when ECR is set up) ---
-      # - name: Push image to ECR
-      #   run: |
-      #     ECR_URI=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}
-      #     docker tag ${{ env.IMAGE_NAME }}:${{ env.SHORT_SHA }} ${ECR_URI}:${{ env.SHORT_SHA }}
-      #     docker tag ${{ env.IMAGE_NAME }}:${{ env.SHORT_SHA }} ${ECR_URI}:latest
-      #     docker push ${ECR_URI}:${{ env.SHORT_SHA }}
-      #     docker push ${ECR_URI}:latest
+      - name: Push image to ECR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          ECR_URI=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}
+          docker tag ${{ env.IMAGE_NAME }}:${{ env.SHORT_SHA }} ${ECR_URI}:${{ env.SHORT_SHA }}
+          docker tag ${{ env.IMAGE_NAME }}:${{ env.SHORT_SHA }} ${ECR_URI}:latest
+          docker push ${ECR_URI}:${{ env.SHORT_SHA }}
+          docker push ${ECR_URI}:latest

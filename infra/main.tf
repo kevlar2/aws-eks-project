@@ -43,3 +43,14 @@ module "eks" {
   service_name       = "eks"
 }
 
+module "ecr" {
+  source           = "./modules/ecr"
+  repository_name  = "2048-game-app"
+  project_name     = var.project_name
+  environment      = var.environment
+  component        = var.component
+  cost_center      = var.cost_center
+  application_name = var.application_name
+  service_name     = "ecr"
+}
+
