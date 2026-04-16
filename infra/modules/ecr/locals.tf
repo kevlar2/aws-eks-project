@@ -1,5 +1,5 @@
 locals {
-  repository_name = "${var.project_name}-${var.environment}-${var.repository_name}"
+  repository_name = lower("${var.project_name}-${var.environment}-${var.repository_name}")
 
   # Common tags applied to all resources
   common_tags = {

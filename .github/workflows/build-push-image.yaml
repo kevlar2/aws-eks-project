@@ -15,21 +15,77 @@ on:
 env:
   IMAGE_NAME: 2048-game-app
   AWS_REGION: ${{ secrets.AWS_REGION }}
-  ECR_REPOSITORY: 2048-eks-project-Dev-2048-game-app
+  ECR_REPOSITORY: 2048-eks-project-dev-2048-game-app
 
 jobs:
   build-and-scan:
     runs-on: ubuntu-latest
     permissions:
       id-token: write
-      contents: read
+      contents: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set short SHA
         run: echo "SHORT_SHA=${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+
+      - name: Determine semantic version
+        id: version
+        run: |
+          VERSION_FILE="app/VERSION"
+
+          # Initialise VERSION file if missing
+          if [ ! -f "$VERSION_FILE" ] || [ ! -s "$VERSION_FILE" ]; then
+            echo "0.1.0" > "$VERSION_FILE"
+          fi
+
+          CURRENT_VERSION=$(cat "$VERSION_FILE" | tr -d '[:space:]')
+
+          # Validate current version format
+          if [[ ! "$CURRENT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Invalid version format '$CURRENT_VERSION' in $VERSION_FILE. Expected semver (e.g. 1.2.3)"
+            exit 1
+          fi
+
+          # On PRs, use current version as-is (no bump)
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "VERSION=${CURRENT_VERSION}" >> "$GITHUB_ENV"
+            echo "version=${CURRENT_VERSION}" >> "$GITHUB_OUTPUT"
+            echo "Current version (PR, no bump): v${CURRENT_VERSION}"
+            exit 0
+          fi
+
+          MAJOR=$(echo "$CURRENT_VERSION" | cut -d. -f1)
+          MINOR=$(echo "$CURRENT_VERSION" | cut -d. -f2)
+          PATCH=$(echo "$CURRENT_VERSION" | cut -d. -f3)
+
+          # Get commit subjects from the merge to determine bump type
+          COMMITS=$(git log --format='%s' HEAD~1..HEAD -- app/ 2>/dev/null || true)
+
+          if echo "$COMMITS" | grep -qE "BREAKING CHANGE|^feat!:"; then
+            BUMP="major"
+            MAJOR=$((MAJOR + 1))
+            MINOR=0
+            PATCH=0
+          elif echo "$COMMITS" | grep -qE "^feat(\(.+\))?:"; then
+            BUMP="minor"
+            MINOR=$((MINOR + 1))
+            PATCH=0
+          else
+            BUMP="patch"
+            PATCH=$((PATCH + 1))
+          fi
+
+          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          echo "$NEW_VERSION" > "$VERSION_FILE"
+
+          echo "VERSION=${NEW_VERSION}" >> "$GITHUB_ENV"
+          echo "version=${NEW_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Bump type: $BUMP | v${CURRENT_VERSION} -> v${NEW_VERSION}"
 
       - name: Configure AWS credentials
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -46,13 +102,15 @@ jobs:
       - name: Build Docker image
         working-directory: app
         run: |
-          docker build -t ${{ env.IMAGE_NAME }}:${{ env.SHORT_SHA }} .
-          docker tag ${{ env.IMAGE_NAME }}:${{ env.SHORT_SHA }} ${{ env.IMAGE_NAME }}:latest
+          docker build \
+            -t ${{ env.IMAGE_NAME }}:v${{ env.VERSION }}-${{ env.SHORT_SHA }} \
+            -t ${{ env.IMAGE_NAME }}:v${{ env.VERSION }} \
+            .
 
       - name: Get image size
         id: image-size
         run: |
-          SIZE_BYTES=$(docker image inspect ${{ env.IMAGE_NAME }}:${{ env.SHORT_SHA }} --format='{{.Size}}')
+          SIZE_BYTES=$(docker image inspect ${{ env.IMAGE_NAME }}:v${{ env.VERSION }}-${{ env.SHORT_SHA }} --format='{{.Size}}')
           SIZE_MB=$(echo "scale=2; $SIZE_BYTES / 1048576" | bc)
           echo "size_mb=${SIZE_MB}" >> "$GITHUB_OUTPUT"
           echo "size_bytes=${SIZE_BYTES}" >> "$GITHUB_OUTPUT"
@@ -61,7 +119,7 @@ jobs:
       - name: Trivy scan - Docker image vulnerabilities (report)
         uses: aquasecurity/trivy-action@v0.35.0
         with:
-          image-ref: ${{ env.IMAGE_NAME }}:${{ env.SHORT_SHA }}
+          image-ref: ${{ env.IMAGE_NAME }}:v${{ env.VERSION }}-${{ env.SHORT_SHA }}
           format: 'table'
           output: 'trivy-image-results.txt'
           severity: 'CRITICAL,HIGH,MEDIUM'
@@ -71,7 +129,7 @@ jobs:
         id: trivy-critical
         uses: aquasecurity/trivy-action@v0.35.0
         with:
-          image-ref: ${{ env.IMAGE_NAME }}:${{ env.SHORT_SHA }}
+          image-ref: ${{ env.IMAGE_NAME }}:v${{ env.VERSION }}-${{ env.SHORT_SHA }}
           format: 'table'
           severity: 'CRITICAL'
           exit-code: '1'
@@ -108,8 +166,9 @@ jobs:
           echo "| Property | Value |" >> "$GITHUB_STEP_SUMMARY"
           echo "|----------|-------|" >> "$GITHUB_STEP_SUMMARY"
           echo "| **Image Name** | \`${{ env.IMAGE_NAME }}\` |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| **Image Tag** | \`${{ env.SHORT_SHA }}\` |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| **Full Reference** | \`${{ env.IMAGE_NAME }}:${{ env.SHORT_SHA }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| **Version** | \`v${{ env.VERSION }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| **Image Tag** | \`v${{ env.VERSION }}-${{ env.SHORT_SHA }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| **Full Reference** | \`${{ env.IMAGE_NAME }}:v${{ env.VERSION }}-${{ env.SHORT_SHA }}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| **Size** | ${{ steps.image-size.outputs.size_mb }} MB |" >> "$GITHUB_STEP_SUMMARY"
           echo "| **Commit** | \`${{ github.sha }}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| **Branch** | \`${{ github.ref_name }}\` |" >> "$GITHUB_STEP_SUMMARY"
@@ -154,7 +213,17 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           ECR_URI=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}
-          docker tag ${{ env.IMAGE_NAME }}:${{ env.SHORT_SHA }} ${ECR_URI}:${{ env.SHORT_SHA }}
-          docker tag ${{ env.IMAGE_NAME }}:${{ env.SHORT_SHA }} ${ECR_URI}:latest
-          docker push ${ECR_URI}:${{ env.SHORT_SHA }}
-          docker push ${ECR_URI}:latest
+          docker tag ${{ env.IMAGE_NAME }}:v${{ env.VERSION }}-${{ env.SHORT_SHA }} ${ECR_URI}:v${{ env.VERSION }}-${{ env.SHORT_SHA }}
+          docker tag ${{ env.IMAGE_NAME }}:v${{ env.VERSION }}-${{ env.SHORT_SHA }} ${ECR_URI}:v${{ env.VERSION }}
+          docker push ${ECR_URI}:v${{ env.VERSION }}-${{ env.SHORT_SHA }}
+          docker push ${ECR_URI}:v${{ env.VERSION }}
+
+      - name: Commit updated VERSION file
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add app/VERSION
+          git diff --cached --quiet && exit 0
+          git commit -m "chore: bump version to v${{ env.VERSION }} [skip ci]"
+          git push
