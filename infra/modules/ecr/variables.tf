@@ -1,16 +1,17 @@
-variable "eks-cluster-name" {
+variable "repository_name" {
   type        = string
-  description = "Name of the EKS cluster for pod identity associations"
+  description = "Name of the ECR repository (appended to project-environment prefix)"
 }
 
-variable "route53_zone_id" {
-  type        = string
-  description = "Route53 hosted zone ID for cert-manager DNS validation"
+variable "max_image_count" {
+  type        = number
+  description = "Maximum number of tagged images to retain in the repository"
+  default     = 10
 }
 
 variable "project_name" {
   type        = string
-  description = "name of my project"
+  description = "Name of the project"
 }
 
 variable "environment" {
@@ -26,27 +27,27 @@ variable "environment" {
 
 variable "managed_by" {
   type        = string
-  description = "who manages the resource"
+  description = "Who manages the resource"
   default     = "Terraform"
 }
 
 variable "component" {
   type        = string
-  description = "component name"
+  description = "Component name for cost attribution"
 }
 
 variable "cost_center" {
   type        = string
-  description = "cost center for billing"
+  description = "Cost center for billing"
 }
 
 variable "application_name" {
   type        = string
-  description = "name of the application"
+  description = "Name of the application"
 }
 
 variable "service_name" {
   type        = string
-  description = "name of the service"
-  default     = "iam"
+  description = "Name of the service"
+  default     = "ecr"
 }

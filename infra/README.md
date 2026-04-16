@@ -4,6 +4,7 @@ This folder contains Terraform infrastructure code for:
 - VPC and networking
 - IAM roles and pod identity associations
 - EKS cluster, node group, and add-ons
+- ECR container image repository
 - GitHub OIDC authentication for CI/CD
 
 ## Folder Layout
@@ -16,6 +17,8 @@ infra/
 │   ├── vpc/            # VPC, subnets, NAT gateways, security groups
 │   ├── IAM/            # Cluster role, node role, cert-manager, external-dns pod identity
 │   ├── eks/            # EKS cluster, node group, launch template, add-ons, OIDC provider
+│   ├── ecr/            # ECR repository with lifecycle policy and scan-on-push
+│   ├── pod-identity/   # Pod identity associations (breaks IAM/EKS circular dependency)
 │   └── github-oidc/    # GitHub OIDC provider + CI IAM role module
 ├── main.tf             # Root module wiring
 ├── provider.tf         # AWS provider + S3 backend (eu-west-2)
@@ -61,7 +64,7 @@ terraform apply
 ```
 
 This creates the GitHub OIDC provider and IAM role that the CI pipeline uses.
-The OIDC role currently has read-only permissions + S3 state access (sufficient for `terraform plan`).
+The OIDC role has read-only permissions + S3 state access + ECR push access.
 
 ### 3) Deploy main infrastructure (infra root)
 
@@ -97,6 +100,7 @@ The `.github/workflows/terraform-tests.yaml` workflow runs on PRs that change `i
 ### Required Secrets
 
 - `AWS_ROLE_ARN` — GitHub OIDC IAM role ARN (from oidc root output)
+- `AWS_REGION` — AWS region for ECR and other services
 - `INFRACOST_API_KEY` — Infracost API key for cost estimation
 
 ## Common Commands
@@ -132,6 +136,8 @@ Root outputs are intentionally minimal and operator-focused:
 - `external-dns-role-arn`
 - `eks-cluster-name`
 - `kubeconfig_update_command`
+- `ecr_repository_url`
+- `ecr_repository_arn`
 
 ## Safety Notes
 

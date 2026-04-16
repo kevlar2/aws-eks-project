@@ -21,3 +21,9 @@ variable "state_bucket" {
   description = "S3 bucket for Terraform state"
   type        = string
 }
+
+variable "ecr_repository_arns" {
+  description = "List of ECR repository ARN patterns the CI role can push to"
+  type        = list(string)
+  default     = []
+}

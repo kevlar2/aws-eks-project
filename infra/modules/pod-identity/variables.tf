@@ -1,16 +1,20 @@
-variable "eks-cluster-name" {
+variable "cluster_name" {
   type        = string
-  description = "Name of the EKS cluster for pod identity associations"
+  description = "Name of the EKS cluster to associate pod identities with"
 }
 
-variable "route53_zone_id" {
-  type        = string
-  description = "Route53 hosted zone ID for cert-manager DNS validation"
+variable "associations" {
+  type = map(object({
+    namespace       = string
+    service_account = string
+    role_arn        = string
+  }))
+  description = "Map of pod identity associations to create (key is used in resource naming)"
 }
 
 variable "project_name" {
   type        = string
-  description = "name of my project"
+  description = "Name of the project"
 }
 
 variable "environment" {
@@ -26,27 +30,27 @@ variable "environment" {
 
 variable "managed_by" {
   type        = string
-  description = "who manages the resource"
+  description = "Who manages the resource"
   default     = "Terraform"
 }
 
 variable "component" {
   type        = string
-  description = "component name"
+  description = "Component name for cost attribution"
 }
 
 variable "cost_center" {
   type        = string
-  description = "cost center for billing"
+  description = "Cost center for billing"
 }
 
 variable "application_name" {
   type        = string
-  description = "name of the application"
+  description = "Name of the application"
 }
 
 variable "service_name" {
   type        = string
-  description = "name of the service"
-  default     = "iam"
+  description = "Name of the service"
+  default     = "pod-identity"
 }

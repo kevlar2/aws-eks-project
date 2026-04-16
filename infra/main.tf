@@ -43,3 +43,39 @@ module "eks" {
   service_name       = "eks"
 }
 
+module "ecr" {
+  source           = "./modules/ecr"
+  repository_name  = "2048-game-app"
+  project_name     = var.project_name
+  environment      = var.environment
+  component        = var.component
+  cost_center      = var.cost_center
+  application_name = var.application_name
+  service_name     = "ecr"
+}
+
+module "pod_identity" {
+  source       = "./modules/pod-identity"
+  cluster_name = module.eks.eks-cluster-name
+
+  associations = {
+    cert-manager = {
+      namespace       = "cert-manager"
+      service_account = "cert-manager"
+      role_arn        = module.IAM.cert-manager-role-arn
+    }
+    external-dns = {
+      namespace       = "external-dns"
+      service_account = "external-dns"
+      role_arn        = module.IAM.external-dns-role-arn
+    }
+  }
+
+  project_name     = var.project_name
+  environment      = var.environment
+  component        = var.component
+  cost_center      = var.cost_center
+  application_name = var.application_name
+  service_name     = "pod-identity"
+}
+

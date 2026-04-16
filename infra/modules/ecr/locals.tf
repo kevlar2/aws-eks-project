@@ -1,5 +1,5 @@
 locals {
-  eks_ebs_csi_driver_role_name = lower("${var.project_name}-${var.environment}-eks-ebs-csi-driver-role")
+  repository_name = lower("${var.project_name}-${var.environment}-${var.repository_name}")
 
   # Common tags applied to all resources
   common_tags = {

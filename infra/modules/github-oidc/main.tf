@@ -92,6 +92,36 @@ data "aws_iam_policy_document" "github_actions_permissions" {
     ]
     resources = ["*"]
   }
+
+  # ECR: authentication token (must be resource "*")
+  dynamic "statement" {
+    for_each = length(var.ecr_repository_arns) > 0 ? [1] : []
+    content {
+      effect    = "Allow"
+      actions   = ["ecr:GetAuthorizationToken"]
+      resources = ["*"]
+    }
+  }
+
+  # ECR: push and pull images (scoped to specific repositories)
+  dynamic "statement" {
+    for_each = length(var.ecr_repository_arns) > 0 ? [1] : []
+    content {
+      effect = "Allow"
+      actions = [
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:GetDownloadUrlForLayer",
+        "ecr:BatchGetImage",
+        "ecr:PutImage",
+        "ecr:InitiateLayerUpload",
+        "ecr:UploadLayerPart",
+        "ecr:CompleteLayerUpload",
+        "ecr:DescribeRepositories",
+        "ecr:ListImages",
+      ]
+      resources = var.ecr_repository_arns
+    }
+  }
 }
 
 resource "aws_iam_role_policy" "github_actions" {
