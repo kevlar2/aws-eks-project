@@ -25,7 +25,7 @@ variable "environment" {
   }
 }
 
-variable "manage_by" {
+variable "managed_by" {
   type        = string
   description = "Who manages the resource"
   default     = "Terraform"

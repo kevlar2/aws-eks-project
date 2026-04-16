@@ -32,7 +32,7 @@ resource "aws_iam_openid_connect_provider" "eks" {
   thumbprint_list = [data.tls_certificate.eks.certificates[0].sha1_fingerprint]
 
   tags = merge(local.common_tags, {
-    Name = "${var.project_name}-${var.environment}-oidc-provider"
+    Name = lower("${var.project_name}-${var.environment}-oidc-provider")
   })
 }
 
@@ -79,7 +79,7 @@ resource "aws_iam_role_policy_attachment" "amazon_ebs_csi_driver" {
 }
 
 resource "aws_launch_template" "eks_worker_nodes" {
-  name_prefix   = "${var.project_name}-${var.environment}-eks-workers-"
+  name_prefix   = lower("${var.project_name}-${var.environment}-eks-workers-")
   instance_type = var.instance_type
 
   metadata_options {
@@ -91,7 +91,7 @@ resource "aws_launch_template" "eks_worker_nodes" {
     resource_type = "instance"
 
     tags = merge(local.common_tags, {
-      Name = "${var.project_name}-${var.environment}-eks-worker-node"
+      Name = lower("${var.project_name}-${var.environment}-eks-worker-node")
     })
   }
 
@@ -99,7 +99,7 @@ resource "aws_launch_template" "eks_worker_nodes" {
     resource_type = "volume"
 
     tags = merge(local.common_tags, {
-      Name = "${var.project_name}-${var.environment}-eks-worker-volume"
+      Name = lower("${var.project_name}-${var.environment}-eks-worker-volume")
     })
   }
 }
@@ -121,7 +121,7 @@ resource "aws_eks_node_group" "eks_worker_node" {
 
   launch_template {
     id      = aws_launch_template.eks_worker_nodes.id
-    version = "$Latest"
+    version = aws_launch_template.eks_worker_nodes.latest_version
   }
 
   depends_on = [var.eks-node-policy]
@@ -183,7 +183,7 @@ resource "aws_eks_addon" "metrics-server" {
   resolve_conflicts_on_update = "PRESERVE"
 
   tags = merge(local.common_tags, {
-    Name = "${var.project_name}-${var.environment}-metrics-server-addon"
+    Name = lower("${var.project_name}-${var.environment}-metrics-server-addon")
   })
 }
 
@@ -196,7 +196,7 @@ resource "aws_eks_addon" "vpc-cni" {
   resolve_conflicts_on_update = "PRESERVE"  #applies when add-on is updated
 
   tags = merge(local.common_tags, {
-    Name = "${var.project_name}-${var.environment}-vpc-cni-addon"
+    Name = lower("${var.project_name}-${var.environment}-vpc-cni-addon")
   })
 }
 
@@ -209,7 +209,7 @@ resource "aws_eks_addon" "core-dns" {
   resolve_conflicts_on_update = "PRESERVE"
 
   tags = merge(local.common_tags, {
-    Name = "${var.project_name}-${var.environment}-coredns-addon"
+    Name = lower("${var.project_name}-${var.environment}-coredns-addon")
   })
 
   depends_on = [aws_eks_node_group.eks_worker_node]
@@ -224,7 +224,7 @@ resource "aws_eks_addon" "kube-proxy" {
   resolve_conflicts_on_update = "PRESERVE"
 
   tags = merge(local.common_tags, {
-    Name = "${var.project_name}-${var.environment}-kube-proxy-addon"
+    Name = lower("${var.project_name}-${var.environment}-kube-proxy-addon")
   })
 }
 
@@ -238,7 +238,7 @@ resource "aws_eks_addon" "ebs-csi-driver" {
   resolve_conflicts_on_update = "PRESERVE"
 
   tags = merge(local.common_tags, {
-    Name = "${var.project_name}-${var.environment}-ebs-csi-addon"
+    Name = lower("${var.project_name}-${var.environment}-ebs-csi-addon")
   })
 
   depends_on = [aws_iam_role_policy_attachment.amazon_ebs_csi_driver, aws_eks_node_group.eks_worker_node]
@@ -253,7 +253,7 @@ resource "aws_eks_addon" "pod-identity-agent" {
   resolve_conflicts_on_update = "PRESERVE"
 
   tags = merge(local.common_tags, {
-    Name = "${var.project_name}-${var.environment}-pod-identity-addon"
+    Name = lower("${var.project_name}-${var.environment}-pod-identity-addon")
   })
 
 }

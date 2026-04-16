@@ -139,18 +139,8 @@ resource "aws_iam_role_policy_attachment" "cert-manager-policy-attachment" {
   policy_arn = aws_iam_policy.cert-manager-iam-policy.arn
 }
 
-#associate pod identity with IAM role
-resource "aws_eks_pod_identity_association" "cert-manager" {
-  cluster_name    = var.eks-cluster-name
-  namespace       = "cert-manager"
-  service_account = "cert-manager"
-  role_arn        = aws_iam_role.cert-manager-pod-identity-role.arn
-  tags = merge(local.common_tags, {
-    Name = "${var.project_name}-${var.environment}-cert-manager-pod-identity-association"
-  })
-}
 
-#External-dns IAM policy
+
 data "aws_iam_policy_document" "external-dns" {
   statement {
     effect = "Allow"
@@ -215,16 +205,6 @@ resource "aws_iam_role_policy_attachment" "external-dns-policy-attachment" {
   policy_arn = aws_iam_policy.external-dns-iam-policy.arn
 }
 
-#associate pod identity with IAM role
-resource "aws_eks_pod_identity_association" "external-dns" {
-  cluster_name    = var.eks-cluster-name
-  namespace       = "external-dns"
-  service_account = "external-dns"
-  role_arn        = aws_iam_role.external-dns-pod-identity-role.arn
-  tags = merge(local.common_tags, {
-    Name = "${var.project_name}-${var.environment}-external-dns-pod-identity-association"
-  })
-}
 
 
 

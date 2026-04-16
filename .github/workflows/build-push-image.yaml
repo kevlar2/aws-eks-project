@@ -209,14 +209,15 @@ jobs:
           echo "::error::Trivy found CRITICAL vulnerabilities in the image. Check the scan summary above."
           exit 1
 
-      - name: Push image to ECR
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: |
-          ECR_URI=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}
-          docker tag ${{ env.IMAGE_NAME }}:v${{ env.VERSION }}-${{ env.SHORT_SHA }} ${ECR_URI}:v${{ env.VERSION }}-${{ env.SHORT_SHA }}
-          docker tag ${{ env.IMAGE_NAME }}:v${{ env.VERSION }}-${{ env.SHORT_SHA }} ${ECR_URI}:v${{ env.VERSION }}
-          docker push ${ECR_URI}:v${{ env.VERSION }}-${{ env.SHORT_SHA }}
-          docker push ${ECR_URI}:v${{ env.VERSION }}
+      # TODO: Uncomment when ECR repo exists (after terraform apply) and K8s manifests are ready
+      # - name: Push image to ECR
+      #   if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      #   run: |
+      #     ECR_URI=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}
+      #     docker tag ${{ env.IMAGE_NAME }}:v${{ env.VERSION }}-${{ env.SHORT_SHA }} ${ECR_URI}:v${{ env.VERSION }}-${{ env.SHORT_SHA }}
+      #     docker tag ${{ env.IMAGE_NAME }}:v${{ env.VERSION }}-${{ env.SHORT_SHA }} ${ECR_URI}:v${{ env.VERSION }}
+      #     docker push ${ECR_URI}:v${{ env.VERSION }}-${{ env.SHORT_SHA }}
+      #     docker push ${ECR_URI}:v${{ env.VERSION }}
 
       - name: Commit updated VERSION file
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
