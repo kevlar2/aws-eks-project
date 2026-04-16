@@ -18,6 +18,7 @@ infra/
 │   ├── IAM/            # Cluster role, node role, cert-manager, external-dns pod identity
 │   ├── eks/            # EKS cluster, node group, launch template, add-ons, OIDC provider
 │   ├── ecr/            # ECR repository with lifecycle policy and scan-on-push
+│   ├── pod-identity/   # Pod identity associations (breaks IAM/EKS circular dependency)
 │   └── github-oidc/    # GitHub OIDC provider + CI IAM role module
 ├── main.tf             # Root module wiring
 ├── provider.tf         # AWS provider + S3 backend (eu-west-2)
