@@ -9,7 +9,9 @@ FROM python@sha256:0b23cfb7425d065008b778022a17b1551c82f8b4866ee5a7a200084b7e2ea
 
 WORKDIR /app 
 
-RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get upgrade -y && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
+RUN pip uninstall -y pip setuptools wheel
 
 COPY --from=buildtime /app/index.html /app/index.html
 
