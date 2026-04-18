@@ -8,6 +8,11 @@ on:
             - '!infra/oidc/**'
             - '!infra/bootstrap/**'
             - '.github/workflows/terraform-apply.yaml'
+    workflow_dispatch:
+
+concurrency:
+    group: terraform-infra
+    cancel-in-progress: false
 
 env:
     AWS_REGION: ${{ secrets.AWS_REGION }}
@@ -40,8 +45,8 @@ jobs:
             
             - name: terraform plan
               working-directory: infra 
-              run: terraform plan -var="aws_region=${{ secrets.AWS_REGION }}" -out=tfplan
+              run: terraform plan -input=false -lock-timeout=5m -var="aws_region=${{ secrets.AWS_REGION }}" -out=tfplan
             
             - name: terraform apply 
               working-directory: infra 
-              run: terraform apply tfplan
+              run: terraform apply -input=false -lock-timeout=5m tfplan
