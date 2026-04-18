@@ -1,0 +1,42 @@
+name: Destroy infrastructure 
+
+on:
+    workflow_dispatch:
+
+env:
+    AWS_REGION: ${{ secrets.AWS_REGION }}
+
+jobs:
+    destroy: 
+        name: terraform destroy
+        runs-on: ubuntu-latest
+        permissions: 
+            id-token: write
+            contents: read 
+        
+        steps:
+            - name: checkout code 
+              uses: actions/checkout@v4
+            
+            - name: AWS authentication
+              uses: aws-actions/configure-aws-credentials@v4
+              with: 
+                role-to-assume: ${{ secrets.AWS_ROLE_ARN }}  
+                aws-region: ${{ secrets.AWS_REGION }}
+            
+            - name: Setup Terraform 
+              uses: hashicorp/setup-terraform@v3 
+            
+            - name: terraform destroy 
+              working-directory: infra 
+              run: |
+                terraform init 
+                terraform plan -var="aws_region=${{ secrets.AWS_REGION }}" -destroy
+                terraform destroy -var="aws_region=${{ secrets.AWS_REGION }}" --auto-approve 
+            
+            - name: Post-destroy cleanup
+              run: |
+                echo "Performing post-destroy cleanup tasks..."
+                # Add any additional cleanup commands here, e.g. deleting local state files
+                rm -rf infra/.terraform
+                rm -rf infra/terraform.tfstate*

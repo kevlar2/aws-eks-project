@@ -1,0 +1,47 @@
+name: Infra deployment
+
+on:
+    push: 
+        branches: [main]
+        paths:
+            - 'infra/**'
+            - '!infra/oidc/**'
+            - '!infra/bootstrap/**'
+            - '.github/workflows/terraform-apply.yaml'
+
+env:
+    AWS_REGION: ${{ secrets.AWS_REGION }}
+
+jobs:
+    deployment: 
+        name: infra deployment
+        runs-on: ubuntu-latest
+        permissions: 
+            id-token: write
+            contents: read 
+        
+        steps:
+            - name: checkout code 
+              uses: actions/checkout@v4
+            
+            - name: AWS authentication
+              uses: aws-actions/configure-aws-credentials@v4
+              with: 
+                role-to-assume: ${{ secrets.AWS_ROLE_ARN }}  
+                aws-region: ${{ secrets.AWS_REGION }}
+            
+            - name: Setup Terraform 
+              uses: hashicorp/setup-terraform@v3 
+            
+            - name: terraform init
+              working-directory: infra 
+              run: terraform init 
+            
+            
+            - name: terraform plan
+              working-directory: infra 
+              run: terraform plan -var="aws_region=${{ secrets.AWS_REGION }}" -out=tfplan
+            
+            - name: terraform apply 
+              working-directory: infra 
+              run: terraform apply tfplan
