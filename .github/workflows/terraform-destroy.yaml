@@ -13,7 +13,7 @@ concurrency:
     cancel-in-progress: false
 
 env:
-    AWS_REGION: ${{ vars.AWS_REGION }}
+    AWS_REGION: ${{ secrets.AWS_REGION }}
 
 jobs:
     destroy: 
@@ -37,7 +37,7 @@ jobs:
               uses: aws-actions/configure-aws-credentials@v4
               with: 
                 role-to-assume: ${{ secrets.AWS_ROLE_ARN }}  
-                aws-region: ${{ vars.AWS_REGION }}
+                aws-region: ${{ secrets.AWS_REGION }}
             
             - name: Setup Terraform 
               uses: hashicorp/setup-terraform@v3 
@@ -46,8 +46,8 @@ jobs:
               working-directory: infra 
               run: |
                 terraform init 
-                terraform plan -input=false -lock-timeout=5m -var="aws_region=${{ vars.AWS_REGION }}" -destroy
-                terraform destroy -input=false -lock-timeout=5m -var="aws_region=${{ vars.AWS_REGION }}" -auto-approve 
+                terraform plan -input=false -lock-timeout=5m -var="aws_region=${{ secrets.AWS_REGION }}" -destroy
+                terraform destroy -input=false -lock-timeout=5m -var="aws_region=${{ secrets.AWS_REGION }}" -auto-approve 
             
             - name: Post-destroy cleanup
               run: |
