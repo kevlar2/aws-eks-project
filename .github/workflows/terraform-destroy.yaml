@@ -1,0 +1,57 @@
+name: Destroy infrastructure 
+
+on:
+    workflow_dispatch:
+        inputs:
+            confirm_destroy:
+                description: 'Type "destroy" to confirm infrastructure teardown'
+                required: true
+                type: string
+
+concurrency:
+    group: terraform-infra
+    cancel-in-progress: false
+
+env:
+    AWS_REGION: ${{ secrets.AWS_REGION }}
+
+jobs:
+    destroy: 
+        name: terraform destroy
+        runs-on: ubuntu-latest
+        permissions: 
+            id-token: write
+            contents: read 
+        
+        steps:
+            - name: Validate confirmation
+              if: github.event.inputs.confirm_destroy != 'destroy'
+              run: |
+                echo "::error::You must type 'destroy' to confirm. Got: '${{ github.event.inputs.confirm_destroy }}'"
+                exit 1
+
+            - name: checkout code 
+              uses: actions/checkout@v4
+            
+            - name: AWS authentication
+              uses: aws-actions/configure-aws-credentials@v4
+              with: 
+                role-to-assume: ${{ secrets.AWS_ROLE_ARN }}  
+                aws-region: ${{ secrets.AWS_REGION }}
+            
+            - name: Setup Terraform 
+              uses: hashicorp/setup-terraform@v3 
+            
+            - name: terraform destroy 
+              working-directory: infra 
+              run: |
+                terraform init 
+                terraform plan -input=false -lock-timeout=5m -var="aws_region=${{ secrets.AWS_REGION }}" -destroy
+                terraform destroy -input=false -lock-timeout=5m -var="aws_region=${{ secrets.AWS_REGION }}" -auto-approve 
+            
+            - name: Post-destroy cleanup
+              run: |
+                echo "Performing post-destroy cleanup tasks..."
+                # Add any additional cleanup commands here, e.g. deleting local state files
+                rm -rf infra/.terraform
+                rm -rf infra/terraform.tfstate*
