@@ -23,7 +23,7 @@ permissions:
 
 env:
   AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
-  AWS_REGION: ${{ secrets.AWS_REGION }}
+  AWS_REGION: ${{ vars.AWS_REGION }}
   TF_ROOT: infra
 
 jobs:

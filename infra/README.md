@@ -100,8 +100,11 @@ The `.github/workflows/terraform-tests.yaml` workflow runs on PRs that change `i
 ### Required Secrets
 
 - `AWS_ROLE_ARN` — GitHub OIDC IAM role ARN (from oidc root output)
-- `AWS_REGION` — AWS region for ECR and other services
 - `INFRACOST_API_KEY` — Infracost API key for cost estimation
+
+### Required Variables
+
+- `AWS_REGION` — AWS region for ECR and other services (e.g. `eu-west-2`)
 
 ## Common Commands
 
