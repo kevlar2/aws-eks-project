@@ -1,8 +1,9 @@
 # ==============================================================================
 # Example Environment Configuration
 # ==============================================================================
-# Copy this file to dev.tfvars / prod.tfvars and fill in your values.
-# Do NOT commit the actual tfvars files — they are gitignored.
+# This is a reference template for all available variables.
+# Per-env tfvars (dev.tfvars, prod.tfvars) are committed with non-sensitive values.
+# For sensitive values, create a local terraform.tfvars (gitignored) or pass via -var flags.
 
 aws_region         = "eu-west-2"
 environment        = "Dev" # Dev, Stage, or Prod

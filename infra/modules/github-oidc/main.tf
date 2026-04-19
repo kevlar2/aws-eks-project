@@ -165,7 +165,7 @@ data "aws_iam_policy_document" "github_actions_permissions" {
         "iam:CreatePolicy", "iam:DeletePolicy",
         "iam:CreatePolicyVersion", "iam:DeletePolicyVersion",
         "iam:TagRole", "iam:UntagRole", "iam:TagPolicy", "iam:UntagPolicy",
-        "iam:PassRole",
+        "iam:PassRole", "iam:UpdateAssumeRolePolicy",
         "iam:CreateOpenIDConnectProvider", "iam:DeleteOpenIDConnectProvider",
         "iam:UpdateOpenIDConnectProviderThumbprint",
         "iam:TagOpenIDConnectProvider", "iam:UntagOpenIDConnectProvider",

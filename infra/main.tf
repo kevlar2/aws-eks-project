@@ -73,6 +73,8 @@ resource "aws_eks_access_policy_association" "cluster_admins" {
   access_scope {
     type = "cluster"
   }
+
+  depends_on = [aws_eks_access_entry.cluster_admins]
 }
 
 module "pod_identity" {

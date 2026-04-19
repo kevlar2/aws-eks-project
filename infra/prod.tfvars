@@ -5,9 +5,9 @@
 aws_region         = "eu-west-2"
 environment        = "Prod"
 project_name       = "2048-eks-project"
-cluster_name       = "2048-eks-cluster"
+cluster_name       = "2048-eks-cluster-prod"
 kubernetes_version = "1.34"
-node-group-name    = "2048-eks-node-group"
+node-group-name    = "2048-eks-node-group-prod"
 instance_type      = "t3.medium"
 vpc_cidr           = "10.1.0.0/16"
 az_count           = 2
