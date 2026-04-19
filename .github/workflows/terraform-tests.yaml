@@ -25,6 +25,7 @@ env:
   AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
   AWS_REGION: ${{ secrets.AWS_REGION }}
   TF_ROOT: infra
+  ENVIRONMENT: dev
 
 jobs:
   # ---------------------------------------------------------------
@@ -98,12 +99,16 @@ jobs:
 
       - name: Terraform Init & Validate
         run: |
-          terraform init -reconfigure
+          terraform init -reconfigure -backend-config="key=${{ env.ENVIRONMENT }}/terraform.tfstate"
           terraform validate
         working-directory: infra
 
       - name: Terraform Plan
-        run: terraform plan -input=false -lock-timeout=300s -var="aws_region=${{ env.AWS_REGION }}"
+        run: |
+          terraform plan -input=false -lock-timeout=300s \
+            -var-file="${{ env.ENVIRONMENT }}.tfvars" \
+            -var 'cluster_admin_arns=["${{ secrets.CLUSTER_ADMIN_ARNS }}"]' \
+            -var 'route53_zone_id=${{ secrets.ROUTE53_ZONE_ID }}'
         working-directory: infra
 
       # --- Security Scanning ---
@@ -164,7 +169,7 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Terraform Init
-        run: terraform init -reconfigure
+        run: terraform init -reconfigure -backend-config="key=${{ env.ENVIRONMENT }}/terraform.tfstate"
         working-directory: infra
 
       - name: Generate Infracost baseline from main
@@ -174,7 +179,7 @@ jobs:
           git stash -- infra/
           git fetch origin main --depth=1
           git checkout origin/main -- infra/
-          terraform -chdir=infra init -reconfigure
+          terraform -chdir=infra init -reconfigure -backend-config="key=${{ env.ENVIRONMENT }}/terraform.tfstate"
           infracost breakdown \
             --path=infra \
             --format=json \
@@ -254,7 +259,10 @@ jobs:
         timeout-minutes: 10
         working-directory: infra
         run: |
-          terraform init -reconfigure
-          terraform plan -out=tfplan.binary -input=false -lock-timeout=300s -var="aws_region=${{ env.AWS_REGION }}"
+          terraform init -reconfigure -backend-config="key=${{ env.ENVIRONMENT }}/terraform.tfstate"
+          terraform plan -out=tfplan.binary -input=false -lock-timeout=300s \
+            -var-file="${{ env.ENVIRONMENT }}.tfvars" \
+            -var 'cluster_admin_arns=["${{ secrets.CLUSTER_ADMIN_ARNS }}"]' \
+            -var 'route53_zone_id=${{ secrets.ROUTE53_ZONE_ID }}'
           terraform show -json tfplan.binary > tfplan.json
           conftest test tfplan.json --policy ../policies/opa/terraform.rego

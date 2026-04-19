@@ -13,5 +13,11 @@ module "github_oidc" {
   ecr_repository_arns = [
     "arn:aws:ecr:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:repository/2048-eks-project-${lower(var.environment)}-2048-game-app",
   ]
+  # Grants broad write permissions (resources = ["*"]) for Terraform infra deployment.
+  # Acceptable here because:
+  #   - OIDC trust policy is scoped to this repo (kevlar2/aws-eks-project) + main branch only
+  #   - Single-purpose personal AWS account
+  #   - Resource ARN scoping is impractical — Terraform creates resources with dynamic names
+  enable_infra_permissions = true
 }
 

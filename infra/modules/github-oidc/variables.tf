@@ -27,3 +27,9 @@ variable "ecr_repository_arns" {
   type        = list(string)
   default     = []
 }
+
+variable "enable_infra_permissions" {
+  description = "Grant permissions to create/modify/delete infrastructure (VPC, EKS, IAM, EC2, ECR)"
+  type        = bool
+  default     = false
+}

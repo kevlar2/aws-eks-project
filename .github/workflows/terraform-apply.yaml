@@ -9,17 +9,27 @@ on:
             - '!infra/bootstrap/**'
             - '.github/workflows/terraform-apply.yaml'
     workflow_dispatch:
+        inputs:
+            environment:
+                description: 'Environment to deploy'
+                required: true
+                type: choice
+                options:
+                    - dev
+                    - prod
+                default: dev
 
 concurrency:
-    group: terraform-infra
+    group: terraform-infra-${{ github.event.inputs.environment || 'dev' }}
     cancel-in-progress: false
 
 env:
     AWS_REGION: ${{ secrets.AWS_REGION }}
+    ENVIRONMENT: ${{ github.event.inputs.environment || 'dev' }}
 
 jobs:
     deployment: 
-        name: infra deployment
+        name: infra deployment (${{ github.event.inputs.environment || 'dev' }})
         runs-on: ubuntu-latest
         permissions: 
             id-token: write
@@ -40,12 +50,16 @@ jobs:
             
             - name: terraform init
               working-directory: infra 
-              run: terraform init 
-            
+              run: terraform init -backend-config="key=${{ env.ENVIRONMENT }}/terraform.tfstate"
             
             - name: terraform plan
               working-directory: infra 
-              run: terraform plan -input=false -lock-timeout=5m -var="aws_region=${{ secrets.AWS_REGION }}" -out=tfplan
+              run: |
+                terraform plan -input=false -lock-timeout=5m \
+                  -var-file="${{ env.ENVIRONMENT }}.tfvars" \
+                  -var 'cluster_admin_arns=["${{ secrets.CLUSTER_ADMIN_ARNS }}"]' \
+                  -var 'route53_zone_id=${{ secrets.ROUTE53_ZONE_ID }}' \
+                  -out=tfplan
             
             - name: terraform apply 
               working-directory: infra 
