@@ -57,13 +57,13 @@ jobs:
                 terraform init -backend-config="key=${{ env.ENVIRONMENT }}/terraform.tfstate"
                 terraform plan -input=false -lock-timeout=5m \
                   -var-file="${{ env.ENVIRONMENT }}.tfvars" \
-                  -var='cluster_admin_arns=${{ secrets.CLUSTER_ADMIN_ARNS }}' \
-                  -var='route53_zone_id=${{ secrets.ROUTE53_ZONE_ID }}' \
+                  -var 'cluster_admin_arns=["${{ secrets.CLUSTER_ADMIN_ARNS }}"]' \
+                  -var 'route53_zone_id=${{ secrets.ROUTE53_ZONE_ID }}' \
                   -destroy
                 terraform destroy -input=false -lock-timeout=5m \
                   -var-file="${{ env.ENVIRONMENT }}.tfvars" \
-                  -var='cluster_admin_arns=${{ secrets.CLUSTER_ADMIN_ARNS }}' \
-                  -var='route53_zone_id=${{ secrets.ROUTE53_ZONE_ID }}' \
+                  -var 'cluster_admin_arns=["${{ secrets.CLUSTER_ADMIN_ARNS }}"]' \
+                  -var 'route53_zone_id=${{ secrets.ROUTE53_ZONE_ID }}' \
                   -auto-approve 
             
             - name: Post-destroy cleanup
