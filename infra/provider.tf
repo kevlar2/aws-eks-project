@@ -18,11 +18,10 @@ terraform {
 
   backend "s3" {
     bucket       = "2048-eks-project-dev-ko-tf-state"
-    key          = "2048/terraform.tfstate"
     region       = "eu-west-2"
     encrypt      = true
     use_lockfile = true #important for state locking to prevent corruption of state file
-
+    # key is passed at init time via -backend-config="key=<env>/terraform.tfstate"
   }
 }
 

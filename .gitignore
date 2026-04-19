@@ -5,3 +5,6 @@
 *.tfstate.backup
 terraform.tfstate.backup
 __pycache__/
+
+# Local tfvars override (contains sensitive values like account IDs)
+terraform.tfvars

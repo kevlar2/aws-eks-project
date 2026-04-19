@@ -3,21 +3,30 @@ name: Destroy infrastructure
 on:
     workflow_dispatch:
         inputs:
+            environment:
+                description: 'Environment to destroy'
+                required: true
+                type: choice
+                options:
+                    - dev
+                    - prod
+                default: dev
             confirm_destroy:
                 description: 'Type "destroy" to confirm infrastructure teardown'
                 required: true
                 type: string
 
 concurrency:
-    group: terraform-infra
+    group: terraform-infra-${{ github.event.inputs.environment }}
     cancel-in-progress: false
 
 env:
     AWS_REGION: ${{ secrets.AWS_REGION }}
+    ENVIRONMENT: ${{ github.event.inputs.environment }}
 
 jobs:
     destroy: 
-        name: terraform destroy
+        name: terraform destroy (${{ github.event.inputs.environment }})
         runs-on: ubuntu-latest
         permissions: 
             id-token: write
@@ -45,13 +54,20 @@ jobs:
             - name: terraform destroy 
               working-directory: infra 
               run: |
-                terraform init 
-                terraform plan -input=false -lock-timeout=5m -var="aws_region=${{ secrets.AWS_REGION }}" -destroy
-                terraform destroy -input=false -lock-timeout=5m -var="aws_region=${{ secrets.AWS_REGION }}" -auto-approve 
+                terraform init -backend-config="key=${{ env.ENVIRONMENT }}/terraform.tfstate"
+                terraform plan -input=false -lock-timeout=5m \
+                  -var-file="${{ env.ENVIRONMENT }}.tfvars" \
+                  -var='cluster_admin_arns=${{ secrets.CLUSTER_ADMIN_ARNS }}' \
+                  -var='route53_zone_id=${{ secrets.ROUTE53_ZONE_ID }}' \
+                  -destroy
+                terraform destroy -input=false -lock-timeout=5m \
+                  -var-file="${{ env.ENVIRONMENT }}.tfvars" \
+                  -var='cluster_admin_arns=${{ secrets.CLUSTER_ADMIN_ARNS }}' \
+                  -var='route53_zone_id=${{ secrets.ROUTE53_ZONE_ID }}' \
+                  -auto-approve 
             
             - name: Post-destroy cleanup
               run: |
                 echo "Performing post-destroy cleanup tasks..."
-                # Add any additional cleanup commands here, e.g. deleting local state files
                 rm -rf infra/.terraform
                 rm -rf infra/terraform.tfstate*

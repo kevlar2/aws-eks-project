@@ -13,5 +13,6 @@ module "github_oidc" {
   ecr_repository_arns = [
     "arn:aws:ecr:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:repository/2048-eks-project-${lower(var.environment)}-2048-game-app",
   ]
+  enable_infra_permissions = true
 }
 

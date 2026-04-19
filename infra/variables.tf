@@ -87,3 +87,9 @@ variable "service_name" {
   default     = "networking"
 }
 
+variable "cluster_admin_arns" {
+  type        = list(string)
+  description = "IAM principal ARNs to grant EKS cluster admin access"
+  default     = []
+}
+
