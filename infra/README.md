@@ -140,6 +140,27 @@ aws eks update-kubeconfig --name <cluster-name> --region eu-west-2
 kubectl get nodes
 ```
 
+### Production considerations
+
+This project uses a single IAM user ARN for cluster admin access, which is appropriate for a demo/personal project. In a production environment with multiple DevOps and SRE engineers, the approach would differ:
+
+**IAM Roles via IAM Identity Center (SSO)**, not individual IAM users. Engineers sign in via an identity provider (Okta, Azure AD, etc.) and assume IAM roles based on their team and permission set:
+
+| Role | EKS Access Policy | Scope |
+|------|-------------------|-------|
+| `DevOpsAdminRole` | `AmazonEKSClusterAdminPolicy` | Cluster-wide |
+| `SRERole` | `AmazonEKSClusterAdminPolicy` | Cluster-wide |
+| `DeveloperRole` | `AmazonEKSAdminPolicy` or `AmazonEKSViewPolicy` | Namespace-scoped |
+
+Key differences from the current setup:
+
+- `cluster_admin_arns` would contain **1-2 IAM role ARNs** (not user ARNs), keeping the list small and stable
+- Individual engineer onboarding/offboarding happens in IAM Identity Center, not in Terraform
+- Namespace-scoped access for developers would use a separate variable (e.g. `cluster_viewer_arns`) with more restrictive EKS access policies
+- The `CLUSTER_ADMIN_ARNS` GitHub secret would hold role ARNs like `["arn:aws:iam::123456789012:role/DevOpsAdminRole"]`
+
+This separation means team changes don't require Terraform modifications — only the identity provider configuration changes.
+
 ## CI Pipelines
 
 ### Terraform Quality Gate (`terraform-tests.yaml`)
