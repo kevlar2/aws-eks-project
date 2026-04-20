@@ -193,6 +193,9 @@ data "aws_iam_policy_document" "github_actions_permissions" {
         "logs:PutRetentionPolicy", "logs:TagLogGroup",
         "logs:DescribeLogGroups",
       ]
+      # Broad scope is intentional — Terraform creates resources with dynamic names,
+      # making ARN scoping impractical. Trust boundary is enforced at the OIDC level
+      # (repo + branch restriction). See infra/oidc/main.tf for full rationale.
       resources = ["*"]
     }
   }
