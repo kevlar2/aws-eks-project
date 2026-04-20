@@ -5,11 +5,6 @@ on:
     paths:
       - 'infra/**'
       - '.github/workflows/terraform-tests.yaml'
-  push:
-    branches: [main]
-    paths:
-      - 'infra/**'
-      - '.github/workflows/terraform-tests.yaml'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
