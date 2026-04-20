@@ -144,6 +144,8 @@ data "aws_iam_policy_document" "github_actions_permissions" {
         "ec2:AuthorizeSecurityGroupEgress", "ec2:RevokeSecurityGroupEgress",
         "ec2:CreateTags", "ec2:DeleteTags",
         "ec2:CreateLaunchTemplate", "ec2:DeleteLaunchTemplate",
+        "ec2:CreateLaunchTemplateVersion", "ec2:DescribeLaunchTemplateVersions",
+        "ec2:RunInstances", "ec2:CreateFleet",
         "ec2:ModifySubnetAttribute",
 
         # EKS
@@ -178,6 +180,7 @@ data "aws_iam_policy_document" "github_actions_permissions" {
         "ecr:SetRepositoryPolicy", "ecr:DeleteRepositoryPolicy",
         "ecr:GetRepositoryPolicy",
         "ecr:TagResource", "ecr:UntagResource",
+        "ecr:ListTagsForResource",
         "ecr:PutImageScanningConfiguration",
         "ecr:PutImageTagMutability",
 
@@ -190,6 +193,9 @@ data "aws_iam_policy_document" "github_actions_permissions" {
         "logs:PutRetentionPolicy", "logs:TagLogGroup",
         "logs:DescribeLogGroups",
       ]
+      # Broad scope is intentional — Terraform creates resources with dynamic names,
+      # making ARN scoping impractical. Trust boundary is enforced at the OIDC level
+      # (repo + branch restriction). See infra/oidc/main.tf for full rationale.
       resources = ["*"]
     }
   }
