@@ -1,0 +1,45 @@
+global:
+  domain: argocd.kubevpro.bluebird-investments.co.uk
+
+crds:
+  install: true
+  keep: true
+
+controller:
+  replicas: 1
+
+repoServer:
+  replicas: 1
+
+applicationSet:
+  replicaCount: 1
+
+server:
+  replicas: 1
+  service:
+    type: ClusterIP
+
+  extraArgs:
+    - --insecure
+
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    annotations:
+      kubernetes.io/ingress.class: nginx
+      cert-manager.io/cluster-issuer: tls-cert-issuer
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+
+    tls:
+      - hosts:
+          - argocd.kubevpro.bluebird-investments.co.uk
+        secretName: argocd-server-tls
+
+    hosts:
+      - argocd.kubevpro.bluebird-investments.co.uk
+
+configs:
+  cm:
+    timeout.reconciliation: 60s
+    application.instanceLabelKey: argocd.argoproj.io/instance
