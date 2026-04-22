@@ -15,7 +15,7 @@ spec:
         valueFiles:
           - $values/k8s/values/cert-manager.yaml
     - repoURL: https://github.com/kevlar2/aws-eks-project.git
-      targetRevision: feat/gitops-platform-apps
+      targetRevision: main
       ref: values
   destination:
     server: https://kubernetes.default.svc
