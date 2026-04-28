@@ -1,26 +1,34 @@
+deploymentMode: SingleBinary
+
 loki:
-  enabled: true
-  isDefault: false
+  auth_enabled: false
+  useTestSchema: true
+  commonConfig:
+    replication_factor: 1
+  storage:
+    type: filesystem
+  limits_config:
+    volume_enabled: true
+
+singleBinary:
+  replicas: 1
   persistence:
     enabled: false
 
-promtail:
+backend:
+  replicas: 0
+
+read:
+  replicas: 0
+
+write:
+  replicas: 0
+
+test:
+  enabled: false
+
+lokiCanary:
+  enabled: false
+
+gateway:
   enabled: true
-
-grafana:
-  enabled: false
-  sidecar:
-    datasources:
-      enabled: false
-
-prometheus:
-  enabled: false
-
-fluent-bit:
-  enabled: false
-
-filebeat:
-  enabled: false
-
-logstash:
-  enabled: false
