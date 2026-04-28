@@ -13,7 +13,7 @@ loki:
 singleBinary:
   replicas: 1
   persistence:
-    enabled: false
+    enabled: true
 
 backend:
   replicas: 0
