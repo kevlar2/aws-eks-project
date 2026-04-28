@@ -33,3 +33,7 @@ alertmanager:
 
 kubeEtcd:
   enabled: false
+
+prometheusOperator:
+  admissionWebhooks:
+    enabled: false
