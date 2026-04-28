@@ -33,3 +33,9 @@ lokiCanary:
 
 gateway:
   enabled: true
+
+chunksCache:
+  enabled: false
+
+resultsCache:
+  enabled: false
