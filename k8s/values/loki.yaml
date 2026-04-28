@@ -1,6 +1,9 @@
 loki:
   enabled: true
   isDefault: false
+  config:
+    limits_config:
+      volume_enabled: true
   persistence:
     enabled: false
 
