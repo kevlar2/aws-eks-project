@@ -1,25 +1,26 @@
+---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: external-dns
+  name: loki
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
   sources:
-    - repoURL: https://kubernetes-sigs.github.io/external-dns/
-      chart: external-dns
-      targetRevision: 1.18.0
+    - repoURL: https://grafana.github.io/helm-charts
+      chart: loki-stack
+      targetRevision: 2.10.2
       helm:
         valueFiles:
-          - $values/k8s/values/external-dns.yaml
+          - $values/k8s/values/loki.yaml
     - repoURL: https://github.com/kevlar2/aws-eks-project.git
       targetRevision: feat/gitops-platform-apps
       ref: values
   destination:
     server: https://kubernetes.default.svc
-    namespace: external-dns
+    namespace: monitoring
   syncPolicy:
     automated:
       prune: true
