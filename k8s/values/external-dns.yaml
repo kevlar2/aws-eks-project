@@ -4,7 +4,7 @@ serviceAccount:
   create: true
   name: external-dns
 
-policy: sync
+policy: upsert-only
 registry: txt
 
 txtOwnerId: external-dns
