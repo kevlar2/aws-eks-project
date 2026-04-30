@@ -1,0 +1,21 @@
+provider: aws
+
+serviceAccount:
+  create: true
+  name: external-dns
+
+policy: upsert-only
+registry: txt
+
+txtOwnerId: external-dns
+
+domainFilters:
+  - kubevpro.bluebird-investments.co.uk
+
+sources:
+  - service
+  - ingress
+
+interval: 1m
+
+logLevel: info

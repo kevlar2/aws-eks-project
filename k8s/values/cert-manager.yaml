@@ -1,0 +1,31 @@
+crds:
+  enabled: true
+
+extraArgs:
+  - --dns01-recursive-nameservers=8.8.8.8:53
+  - --dns01-recursive-nameservers-only
+
+serviceAccount:
+  create: true
+  name: cert-manager
+
+extraObjects:
+  - |
+    apiVersion: cert-manager.io/v1
+    kind: ClusterIssuer
+    metadata:
+      name: tls-cert-issuer
+    spec:
+      acme:
+        server: https://acme-v02.api.letsencrypt.org/directory
+        email: platform@bluebird-investments.co.uk
+        privateKeySecretRef:
+          name: tls-cert-issuer
+        solvers:
+          - dns01:
+              route53:
+                region: eu-west-2
+                hostedZoneID: Z008157839VKLC5BD1MTT
+            selector:
+              dnsZones:
+                - kubevpro.bluebird-investments.co.uk

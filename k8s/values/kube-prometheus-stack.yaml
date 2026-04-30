@@ -1,0 +1,53 @@
+grafana:
+  enabled: true
+  defaultDashboardsTimezone: utc
+  admin:
+    existingSecret: kube-prometheus-stack-grafana
+    userKey: admin-user
+    passwordKey: admin-password
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: tls-cert-issuer
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+      external-dns.alpha.kubernetes.io/hostname: grafana.monitoring.kubevpro.bluebird-investments.co.uk
+    hosts:
+      - grafana.monitoring.kubevpro.bluebird-investments.co.uk
+    tls:
+      - hosts:
+          - grafana.monitoring.kubevpro.bluebird-investments.co.uk
+        secretName: grafana-tls
+  
+  additionalDataSources:
+    - name: Loki
+      type: loki
+      access: proxy
+      url: http://loki-gateway.monitoring.svc
+      isDefault: false
+
+prometheus:
+  prometheusSpec:
+    retention: 7d
+    storageSpec: {}
+
+alertmanager:
+  enabled: true
+
+kubeEtcd:
+  enabled: false
+
+prometheusOperator:
+  tls:
+    enabled: true
+  admissionWebhooks:
+    enabled: true
+    failurePolicy: IgnoreOnInstallOnly
+    annotations:
+      argocd.argoproj.io/hook: PreSync
+      argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+    patch:
+      annotations:
+        argocd.argoproj.io/hook: PreSync
+        argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded

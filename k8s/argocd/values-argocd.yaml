@@ -19,17 +19,15 @@ server:
   service:
     type: ClusterIP
 
-  extraArgs:
-    - --insecure
-
   ingress:
     enabled: true
     ingressClassName: nginx
     annotations:
       kubernetes.io/ingress.class: nginx
       cert-manager.io/cluster-issuer: tls-cert-issuer
+      external-dns.alpha.kubernetes.io/hostname: argocd.kubevpro.bluebird-investments.co.uk
       nginx.ingress.kubernetes.io/ssl-redirect: "true"
-      nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+      nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
 
     tls:
       - hosts:
