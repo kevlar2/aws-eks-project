@@ -18,7 +18,7 @@ extraObjects:
     spec:
       acme:
         server: https://acme-v02.api.letsencrypt.org/directory
-        email: korukele84@gmail.com
+        email: platform@bluebird-investments.co.uk
         privateKeySecretRef:
           name: tls-cert-issuer
         solvers:
