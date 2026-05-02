@@ -1,0 +1,20 @@
+replicaCount: 1
+
+image:
+  repository: ""
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+containerPort: 3000
+
+service:
+  port: 80
+
+ingress:
+  enabled: false
+  className: nginx
+  host: ""
+  tlsSecretName: ""
+  annotations: {}
+
+resources: {}

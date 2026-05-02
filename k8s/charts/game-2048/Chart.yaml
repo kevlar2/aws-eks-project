@@ -1,0 +1,6 @@
+apiVersion: v2
+name: game-2048
+description: Helm chart for 2048 web app
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

@@ -1,0 +1,16 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: apps
+  namespace: argocd
+spec:
+  description: Application workloads managed by ArgoCD
+  sourceRepos:
+    - https://github.com/kevlar2/aws-eks-project.git
+  destinations:
+    - namespace: game-2048
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
