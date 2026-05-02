@@ -1,0 +1,29 @@
+replicaCount: 2
+
+image:
+  repository: 948700347171.dkr.ecr.eu-west-2.amazonaws.com/2048-game-app
+  tag: latest
+  pullPolicy: IfNotPresent
+
+containerPort: 3000
+
+service:
+  port: 80
+
+ingress:
+  enabled: true
+  className: nginx
+  host: app.kubevpro.bluebird-investments.co.uk
+  tlsSecretName: game-2048-tls
+  annotations:
+    cert-manager.io/cluster-issuer: tls-cert-issuer
+    external-dns.alpha.kubernetes.io/hostname: app.kubevpro.bluebird-investments.co.uk
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi

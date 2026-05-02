@@ -1,0 +1,26 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: game-2048
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: apps
+  sources:
+    - repoURL: https://github.com/kevlar2/aws-eks-project.git
+      targetRevision: main
+      path: k8s/charts/game-2048
+      helm:
+        valueFiles:
+          - $values/k8s/values/game-2048.yaml
+    - repoURL: https://github.com/kevlar2/aws-eks-project.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: game-2048
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
