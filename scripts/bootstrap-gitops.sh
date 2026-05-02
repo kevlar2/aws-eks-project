@@ -15,6 +15,7 @@ require_cmd() {
 
 require_cmd helmfile
 require_cmd kubectl
+require_cmd openssl
 
 printf "[1/5] Bootstrapping ArgoCD + ingress-nginx with Helmfile...\n"
 helmfile -f "$HELMFILE_PATH" sync

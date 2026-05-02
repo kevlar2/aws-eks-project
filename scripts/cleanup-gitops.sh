@@ -31,6 +31,9 @@ delete_if_exists() {
 require_cmd kubectl
 
 printf "[1/7] Disabling ArgoCD auto-sync on managed applications...\n"
+# Disable app-of-apps first so it cannot revert patches to child apps via self-heal.
+disable_autosync "argocd-app-of-apps"
+strip_finalizer  "argocd-app-of-apps"
 for app in cert-manager external-dns kube-prometheus-stack loki promtail game-2048; do
   disable_autosync "$app"
 done
@@ -47,7 +50,7 @@ printf "[3/7] Stripping ArgoCD finalizers to prevent deletion deadlock...\n"
 # resource is stuck (e.g. cert-manager webhook, CRD with finalizer), the Application
 # deletion hangs indefinitely. Stripping finalizers first lets Kubernetes complete
 # the deletion immediately. Resources in each namespace will be cleaned up in step 4.
-for app in game-2048 cert-manager external-dns kube-prometheus-stack loki promtail argocd-app-of-apps; do
+for app in game-2048 cert-manager external-dns kube-prometheus-stack loki promtail; do
   strip_finalizer "$app"
 done
 

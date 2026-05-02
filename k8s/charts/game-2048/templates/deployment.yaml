@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: game-2048
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          image: "{{ required "image.repository is required" .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http
