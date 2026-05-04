@@ -5,11 +5,13 @@ on:
     branches: [main]
     paths:
       - 'app/**'
+      - '!app/VERSION'
       - '.github/workflows/build-push-image.yaml'
   pull_request:
     branches: [main]
     paths:
       - 'app/**'
+      - '!app/VERSION'
       - '.github/workflows/build-push-image.yaml'
 
 env:
@@ -216,9 +218,14 @@ jobs:
       # --- Push image to ECR and commit version bump only on main branch pushes (not on PRs) ---
       - name: Install yq
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          YQ_VERSION: "v4.53.2"
+          YQ_SHA256: "d56bf5c6819e8e696340c312bd70f849dc1678a7cda9c2ad63eebd906371d56b"
         run: |
-          wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
-          chmod +x /usr/local/bin/yq
+          sudo wget -qO /usr/local/bin/yq \
+            https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64
+          echo "${YQ_SHA256}  /usr/local/bin/yq" | sha256sum -c -
+          sudo chmod +x /usr/local/bin/yq
 
       - name: Push image to ECR
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
