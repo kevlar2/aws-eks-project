@@ -18,7 +18,7 @@ env:
   ECR_REPOSITORY: 2048-eks-project-dev-2048-game-app
 
 jobs:
-  build-and-scan:
+  build-scan-and-push:
     runs-on: ubuntu-latest
     concurrency:
       group: build-push-${{ github.ref }}
