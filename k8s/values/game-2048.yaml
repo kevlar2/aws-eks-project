@@ -1,19 +1,15 @@
 replicaCount: 2
-
 image:
   repository: 948700347171.dkr.ecr.eu-west-2.amazonaws.com/2048-eks-project-dev-2048-game-app
   # tag is managed by CI — do not edit manually
   # format: v{SEMVER}-{SHORT_SHA} e.g. v1.2.3-abc1234
   # updated by: .github/workflows/build-push-image.yaml on every push to main
-  tag: v0.0.0-0000000
+  tag: v0.1.2-2359484
   # IfNotPresent is correct here — CI always pushes an immutable tag so cached images are safe
   pullPolicy: IfNotPresent
-
 containerPort: 3000
-
 service:
   port: 80
-
 ingress:
   enabled: true
   className: nginx
@@ -23,7 +19,6 @@ ingress:
     cert-manager.io/cluster-issuer: tls-cert-issuer
     external-dns.alpha.kubernetes.io/hostname: app.kubevpro.bluebird-investments.co.uk
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
-
 resources:
   requests:
     cpu: 100m
