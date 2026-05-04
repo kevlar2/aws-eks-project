@@ -40,6 +40,14 @@ kubeEtcd:
 
 prometheusOperator:
   tls:
-    enabled: false
+    enabled: true
   admissionWebhooks:
-    enabled: false
+    enabled: true
+    failurePolicy: IgnoreOnInstallOnly
+    annotations:
+      argocd.argoproj.io/hook: PreSync
+      argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+    patch:
+      annotations:
+        argocd.argoproj.io/hook: PostSync
+        argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
