@@ -23,11 +23,6 @@ variable "private_subnet_id" {
   description = "List of private subnet IDs for the EKS worker nodes"
 }
 
-variable "vpc_id" {
-  type        = string
-  description = "ID of the VPC where the EKS cluster is deployed"
-}
-
 variable "eks_cluster_policy" {
   type        = any
   description = "EKS cluster IAM policy attachment (used for depends_on ordering)"
