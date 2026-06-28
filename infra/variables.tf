@@ -48,8 +48,7 @@ variable "instance_type" {
 
 variable "route53_zone_id" {
   type        = string
-  description = "Route53 hosted zone ID for cert-manager DNS validation"
-  default     = "Z008157839VKLC5BD1MTT"
+  description = "Route53 hosted zone ID for cert-manager DNS validation. Supplied via -var flag locally or the ROUTE53_ZONE_ID GitHub secret in CI — never committed to Git."
 }
 
 variable "environment" {

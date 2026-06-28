@@ -236,10 +236,16 @@ jobs:
           docker push ${ECR_URI}:v${{ env.VERSION }}-${{ env.SHORT_SHA }}
           docker push ${ECR_URI}:v${{ env.VERSION }}
 
-      - name: Update image tag in values file
+      - name: Update image repository and tag in values file
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
-          yq -i '.image.tag = "v${{ env.VERSION }}-${{ env.SHORT_SHA }}"' k8s/values/game-2048.yaml
+          # Derive the full ECR URI from the OIDC login output so the AWS account
+          # ID is never hardcoded in Git — it flows from the OIDC role at runtime.
+          ECR_URI="${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}"
+          yq -i '
+            .image.repository = "'"${ECR_URI}"'" |
+            .image.tag = "v${{ env.VERSION }}-${{ env.SHORT_SHA }}"
+          ' k8s/values/game-2048.yaml
 
       - name: Commit release artifacts
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'

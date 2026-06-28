@@ -12,7 +12,6 @@ module "vpc" {
 
 module "IAM" {
   source           = "./modules/IAM"
-  eks-cluster-name = var.cluster_name
   route53_zone_id  = var.route53_zone_id
   project_name     = var.project_name
   environment      = var.environment
@@ -29,7 +28,6 @@ module "eks" {
   kubernetes_version = var.kubernetes_version
   public_subnet_id   = module.vpc.public_subnet_id
   private_subnet_id  = module.vpc.private_subnet_id
-  vpc_id             = module.vpc.vpc_id
   eks_cluster_policy = module.IAM.eks-cluster-policy
   eks-node-arn       = module.IAM.eks-node-arn
   node-group-name    = var.node-group-name
